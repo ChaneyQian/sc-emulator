@@ -229,7 +229,7 @@ class Calc {
   dispatch(fn, key) {
     if (fn === 'on') { this.app === 'table' ? this.startTable() : this.toCalc(); return; }
     if (fn === 'off') { this.off = true; this.desc = 'SHIFT + AC = 关机，按 ON 重新开机'; return; }
-    if (NA[fn] && this.scr.k !== 'menu') { this.msg(`模拟器暂不支持：${NA[fn]}`); return; }
+    if (NA[fn] && this.scr.k !== 'menu') { this.msg(`还没做：${NA[fn]}`); return; }
     this['k_' + this.scr.k](fn, key);
   }
   onPending(key, v) {
@@ -331,7 +331,7 @@ class Calc {
       case 'var': this.openMenu('var'); return;
       case 'func': this.openMenu('func'); return;
       case 'catalog': this.openMenu('catalog'); return;
-      case 'tools': this.msg('Calculate 应用的 TOOLS 菜单暂未模拟'); return;
+      case 'tools': this.msg('还没做：Calculate 里的 TOOLS 菜单'); return;
       case 'format': if (ed.done && sc.res) this.openMenu('format'); return;
     }
   }
@@ -343,7 +343,7 @@ class Calc {
     this.scr = sc;
     this.k_edit(fn, key);
   }
-  k_msg() { this.scr = this.scr.back; this.desc = '关闭提示，回到原来的画面'; }
+  k_msg() { this.scr = this.scr.back; this.desc = '回到原来的画面'; }
   k_err(fn) {
     const sc = this.scr;
     if (fn === 'ac') { if (this.app === 'table') this.startTable(); else this.toCalc(); this.desc = 'AC：清除，重新输入'; }
@@ -361,7 +361,7 @@ class Calc {
   }
   openMenu(name) {
     const def = this.menuDef(name);
-    if (!def) { this.msg(`模拟器暂不支持：${name}`); return; }
+    if (!def) { this.msg(`还没做：${name}`); return; }
     let sel = 0;
     if (name === 'main') sel = Math.max(0, def.items.findIndex(it => it.act === 'app:' + this.app || (this.app === 'eqn' && it.act === 'menu:eqn')));
     if (def.mark) sel = Math.max(0, def.items.findIndex(it => it.act === `${def.mark}:${def.mark === 'io' ? this.io : this.angle}`));
@@ -399,7 +399,7 @@ class Calc {
   act(item) {
     const [a, arg] = item.act.split(':');
     switch (a) {
-      case 'na': this.msg(`模拟器暂不支持：${item.key}`); return;
+      case 'na': this.msg(`还没做：${item.key}`); return;
       case 'menu': this.openMenu(arg); return;
       case 'app': this.exitMenus(); if (arg === 'table') this.startTable(); else this.toCalc(); return;
       case 'angle': case 'io':

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SC Emulator · Casio 计算器课堂模拟器</title>
-<meta name="description" content="fx-991CW、fx-991EX、fx-991ES PLUS 三款 Casio 科学计算器的网页模拟：0580 押题卷按法演示、教师自由演示、Y12 公式练习。">
+<title>SC Emulator · Casio 计算器模拟</title>
+<meta name="description" content="在网页上用 fx-991CW、fx-991EX、fx-991ES PLUS：看押题卷每道题怎么按，上课演示，练 Y12 公式。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='2' width='20' height='28' rx='4' fill='%23202224'/%3E%3Crect x='9' y='5' width='14' height='8' rx='1.5' fill='%23cfd8c6'/%3E%3Ccircle cx='12' cy='19' r='1.6' fill='%23e8e8e6'/%3E%3Ccircle cx='16' cy='19' r='1.6' fill='%23e8e8e6'/%3E%3Ccircle cx='20' cy='19' r='1.6' fill='%23e8e8e6'/%3E%3Ccircle cx='12' cy='24' r='1.6' fill='%23e8e8e6'/%3E%3Ccircle cx='16' cy='24' r='1.6' fill='%23e8e8e6'/%3E%3Ccircle cx='20' cy='24' r='1.6' fill='%233b7cf0'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -14,26 +14,25 @@
 <div class="home" id="home">
   <header class="home-top">
     <a class="brandmark" href="#/" aria-label="SC Emulator 首页"><span class="bm-ico" aria-hidden="true"></span>SC Emulator</a>
-    <span class="home-note">Casio 科学计算器课堂模拟器</span>
+    <span class="home-note">Casio 计算器模拟</span>
   </header>
   <section class="hero">
-    <p class="eyebrow">选机型 · 选模式</p>
-    <h1>三款 Casio 计算器，一套按法</h1>
-    <p class="lede">同一道题在 fx-991CW、fx-991EX、fx-991ES PLUS 上各按哪些键、屏幕显示什么，都能逐键播放。老师可以投屏自由演示，学生可以用 Y12 公式随堂练习。</p>
+    <h1>你用的是哪一台？</h1>
+    <p class="lede">三台计算器的按键位置和菜单都照着真机做。选好机型，可以一步步看押题卷怎么按，上课拿来演示，也可以做 Y12 的公式题。</p>
   </section>
   <section class="models" id="model-cards" aria-label="选择机型"></section>
   <section class="modes" aria-label="三种模式">
-    <article class="mode-tile"><span class="mt-ico" aria-hidden="true">▶</span><h3>按法演示</h3><p>0580 押题卷 49 题，按题目逐键播放：当前按键高亮，SHIFT / ALPHA 先亮，屏幕同步出结果。</p></article>
-    <article class="mode-tile"><span class="mt-ico" aria-hidden="true">✎</span><h3>自由模式</h3><p>给老师上课用：像真机一样随便按，能算分数、根式、方程、表格；按过的键自动记成按法，可回放、可复制。</p></article>
-    <article class="mode-tile"><span class="mt-ico" aria-hidden="true">✓</span><h3>公式练习</h3><p>Y12（AS Level）常用公式随机出题：二次方程、弧度、数列、微积分、二项分布……做错了可以看按法提示。</p></article>
+    <div class="mode"><h3>按法演示</h3><p>押题卷 49 题，一步一步放。正在按的键会亮，要按 SHIFT 或 ALPHA 的先亮它们。</p></div>
+    <div class="mode"><h3>自由模式</h3><p>上课随手按。分数、根式、方程、表格都能算，按过的键会记下来，讲完可以重放。</p></div>
+    <div class="mode"><h3>公式练习</h3><p>Y12 常用公式随机出题，二次方程、弧度、数列、微积分、二项分布都有。不会做可以看按法。</p></div>
   </section>
-  <footer class="home-foot">教学用网页模拟器，与 CASIO 官方无关；产品照片版权归 CASIO 所有。离线时直接双击 index.html 也能用。</footer>
+  <footer class="home-foot">不是 CASIO 官方产品，产品照片版权归 CASIO。下载下来双击 index.html，没网也能用。</footer>
 </div>
 
 <!-- ================= 机型页 ================= -->
 <div class="app" id="app" hidden>
   <header class="topbar">
-    <a class="tb-home" href="#/" title="返回首页选机型"><span aria-hidden="true">‹</span> 机型</a>
+    <a class="tb-home" href="#/" title="回到首页"><span aria-hidden="true">‹</span> 机型</a>
     <div class="tb-model">
       <img class="tb-thumb" id="tb-thumb" alt="" width="22" height="44">
       <div><div class="tb-name" id="tb-name"></div><div class="tb-series" id="tb-series"></div></div>
@@ -45,8 +44,8 @@
     </nav>
     <div class="tb-right">
       <nav class="seg sm" id="model-tabs" aria-label="切换机型"></nav>
-      <button type="button" class="btn ghost" id="btn-photo" title="对照实物照片">实物</button>
-      <button type="button" class="btn ghost" id="btn-immersive" aria-pressed="false" title="沉浸模式：只留计算器，适合投屏（F）">⛶ 沉浸</button>
+      <button type="button" class="btn ghost" id="btn-photo" title="看这台计算器的实物照片">实物照片</button>
+      <button type="button" class="btn ghost" id="btn-immersive" aria-pressed="false" title="只留计算器，投屏用（F）">⛶ 全屏</button>
     </div>
   </header>
 
@@ -76,57 +75,57 @@
     <!-- 按法演示 -->
     <section class="panel" data-panel="demo" aria-label="按法演示">
       <div class="panel-bar">
-        <h2 class="panel-title">0580 押题卷 · 按法演示</h2>
-        <button type="button" class="btn ghost sm" id="btn-picker" aria-controls="picker" aria-expanded="true" title="显示 / 隐藏题目列表（T）">隐藏题目</button>
+        <h2 class="panel-title">0580 押题卷</h2>
+        <button type="button" class="btn ghost sm" id="btn-picker" aria-controls="picker" aria-expanded="true" title="收起或展开题目（T）">收起题目</button>
       </div>
       <div class="picker" id="picker">
         <nav class="qnav" id="qnav" aria-label="选择题目"></nav>
-        <p class="legend"><span class="qb sample">8</span>有按键动画<span class="qb sample nc">5</span>不用按计算器<span class="qb sample ncp">13</span>Non-calculator 卷</p>
+        <p class="legend"><span class="qb sample">8</span>有按法<span class="qb sample nc">5</span>不用计算器<span class="qb sample ncp">13</span>Non-calculator 卷</p>
       </div>
       <article class="card qcard" id="qcard"></article>
       <div class="card steps">
         <p class="ptitle" id="ptitle"></p>
         <ol class="chips" id="chips"></ol>
-        <p class="foot">点计算器上任意一个键，可查看它的主功能和第二功能。切换机型后，按法会按该机型的键位和菜单重新生成。</p>
-        <p class="foot keys"><kbd>空格</kbd> 播放 / 暂停　<kbd>←</kbd> <kbd>→</kbd> 单步（翻页笔 <kbd>PgUp</kbd> <kbd>PgDn</kbd>）　<kbd>[</kbd> <kbd>]</kbd> 换题　<kbd>F</kbd> 沉浸模式　<kbd>T</kbd> 题目列表</p>
+        <p class="foot">点计算器上的键，可以看它的第二功能。换一台机型，按法会跟着换。</p>
+        <p class="foot keys"><kbd>空格</kbd> 播放 / 暂停　<kbd>←</kbd> <kbd>→</kbd> 上一步 / 下一步，翻页笔也行　<kbd>[</kbd> <kbd>]</kbd> 换题　<kbd>F</kbd> 全屏　<kbd>T</kbd> 收起题目</p>
       </div>
     </section>
 
     <!-- 自由模式 -->
     <section class="panel" data-panel="free" aria-label="自由模式">
       <div class="panel-bar">
-        <h2 class="panel-title">自由模式 · 课堂演示</h2>
-        <span class="panel-sub">直接点计算器按键，或用电脑键盘输入</span>
+        <h2 class="panel-title">自由模式</h2>
+        <span class="panel-sub">点按键，或者直接用键盘打</span>
       </div>
       <div class="card">
         <div class="card-h">
           <h3>按键记录</h3>
           <span class="tag" id="log-count">0 步</span>
           <div class="card-actions">
-            <button type="button" class="btn sm" id="log-replay" title="从头回放刚才按过的键">▶ 回放</button>
-            <button type="button" class="btn sm" id="log-copy" title="复制成文字按法">复制按法</button>
-            <button type="button" class="btn sm ghost" id="log-clear">清空记录</button>
+            <button type="button" class="btn sm" id="log-replay" title="从头再放一遍">重放</button>
+            <button type="button" class="btn sm" id="log-copy" title="把按法复制成文字">复制</button>
+            <button type="button" class="btn sm ghost" id="log-clear">清空</button>
           </div>
         </div>
         <ol class="chips" id="log"></ol>
-        <p class="hint-empty" id="log-empty">按下的键会出现在这里。投屏时学生能看到每一步按了什么，讲完可以一键回放。</p>
+        <p class="hint-empty" id="log-empty">按过的键会记在这里。讲完可以从头重放一遍给学生看。</p>
       </div>
       <div class="grid2">
         <div class="card">
-          <div class="card-h"><h3>当前设置</h3></div>
+          <div class="card-h"><h3>设置</h3></div>
           <div class="setrow"><span>角度单位</span><div class="seg sm" id="set-angle"><button type="button" class="seg-b" data-v="D">Deg</button><button type="button" class="seg-b" data-v="R">Rad</button></div></div>
-          <div class="setrow"><span>结果显示</span><div class="seg sm" id="set-io"><button type="button" class="seg-b" data-v="math">分数 / 根式</button><button type="button" class="seg-b" data-v="dec">小数</button></div></div>
-          <p class="foot">这是老师的快捷开关；要教学生按法时，请在计算器上用 SETUP / SETTINGS 菜单设置。</p>
-          <button type="button" class="btn sm ghost" id="calc-reset">重置计算器（清除变量与设置）</button>
+          <div class="setrow"><span>结果</span><div class="seg sm" id="set-io"><button type="button" class="seg-b" data-v="math">分数、根式</button><button type="button" class="seg-b" data-v="dec">小数</button></div></div>
+          <p class="foot">这里改是图方便。要教学生自己设置，请在计算器上进 SETUP（CW 是 SETTINGS）。</p>
+          <button type="button" class="btn sm ghost" id="calc-reset" title="清空变量，设置恢复默认">重置计算器</button>
         </div>
         <div class="card">
-          <div class="card-h"><h3>电脑键盘</h3></div>
+          <div class="card-h"><h3>键盘</h3></div>
           <ul class="kbd-list">
             <li><kbd>0</kbd>–<kbd>9</kbd> <kbd>.</kbd> <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> 对应按键</li>
             <li><kbd>^</kbd> 乘方　<kbd>Enter</kbd> =　<kbd>Backspace</kbd> DEL　<kbd>Delete</kbd> AC</li>
-            <li><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> 方向键　<kbd>F</kbd> 沉浸模式</li>
+            <li><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> 方向键　<kbd>F</kbd> 全屏</li>
           </ul>
-          <p class="foot">已模拟：普通计算（分数、根式、π 精确结果）、CALC / SOLVE、d/dx、∫、Σ、变量、方程（二次、三次、二元 / 三元一次）、表格。统计、矩阵等模式会提示“暂不支持”。</p>
+          <p class="foot">能算分数、根式、π、CALC、SOLVE、d/dx、∫、Σ、变量、方程和表格。统计、矩阵、复数还没做，按了会提示。</p>
         </div>
       </div>
     </section>
@@ -134,7 +133,7 @@
     <!-- 公式练习 -->
     <section class="panel" data-panel="practice" aria-label="公式练习">
       <div class="panel-bar">
-        <h2 class="panel-title">公式练习 · Y12</h2>
+        <h2 class="panel-title">Y12 公式练习</h2>
         <span class="score" id="score" aria-live="polite"></span>
       </div>
       <div class="card">
@@ -146,7 +145,7 @@
   </main>
 </div>
 
-<button type="button" class="imm-exit" id="imm-exit" title="退出沉浸模式（Esc）">✕ 退出沉浸</button>
+<button type="button" class="imm-exit" id="imm-exit" title="退出全屏（Esc）">✕ 退出全屏</button>
 <div class="imm-hint" id="imm-hint" aria-live="polite"></div>
 <div class="imm-key" id="imm-key" aria-hidden="true"></div>
 <dialog class="photo" id="photo">

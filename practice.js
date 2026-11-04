@@ -55,7 +55,7 @@ const PRACTICE = (() => {
       gen() {
         const a = nz(-6, 6), b = nz(-12, 12), c = nz(-9, 9), D = b * b - 4 * a * c;
         return {
-          q: `求 ${polyHtml([[a, 2], [b, 1], [c, 0]])} = 0 的判别式 b² − 4ac，并判断实根个数（填判别式的值）。`,
+          q: `求 ${polyHtml([[a, 2], [b, 1], [c, 0]])} = 0 的判别式 b² − 4ac。`,
           answers: [{ lab: 'b² − 4ac', v: D, acc: 'exact' }],
           seq: `${N(b)} sq - 4 * ${N(a)} * ${N(c)} =`,
           work: `${f(b)}² − 4 × ${f(a)} × ${f(c)} = ${f(D)}，${D > 0 ? '两个不等实根' : D === 0 ? '两个相等实根' : '没有实根'}`,
@@ -67,7 +67,7 @@ const PRACTICE = (() => {
         let p, d;
         do { p = [ri(-9, 9), ri(-9, 9), ri(-9, 9), ri(-9, 9)]; d = Math.hypot(p[2] - p[0], p[3] - p[1]); } while (!d || Number.isInteger(d));
         return {
-          q: `求点 A(${f(p[0])}, ${f(p[1])}) 与 B(${f(p[2])}, ${f(p[3])}) 之间的距离，保留 3 位有效数字。`,
+          q: `A(${f(p[0])}, ${f(p[1])})，B(${f(p[2])}, ${f(p[3])})，求 AB 的长，保留 3 位有效数字。`,
           answers: [{ lab: 'AB', v: d, acc: 3 }],
           seq: `sqrt ( ${N(p[2])} - ${N(p[0])} ) sq + ( ${N(p[3])} - ${N(p[1])} ) sq R =`,
           work: `√((${f(p[2])} − ${f(p[0])})² + (${f(p[3])} − ${f(p[1])})²) = √${f((p[2] - p[0]) ** 2 + (p[3] - p[1]) ** 2)}`,
@@ -89,7 +89,7 @@ const PRACTICE = (() => {
       gen() {
         const d = pick([15, 20, 35, 40, 50, 75, 100, 105, 130, 140, 160, 200, 225, 250, 310]);
         return {
-          q: `把 ${d}° 换算成弧度，保留 3 位有效数字（计算器先显示 π 的分数形式）。`,
+          q: `把 ${d}° 化成弧度，保留 3 位有效数字。计算器会先给出带 π 的分数。`,
           answers: [{ lab: 'θ（rad）', v: (d * Math.PI) / 180, acc: 3 }],
           seq: `${d} * pi / 180 = sd`,
           work: `${d} × π ÷ 180 = ${f((d * Math.PI) / 180)}`,
@@ -222,7 +222,7 @@ const PRACTICE = (() => {
         const P = ri(2, 90) * 50, k = pick([0.02, 0.035, 0.05, 0.08, -0.04, -0.06]), t = ri(3, 25);
         const A = P * Math.exp(k * t);
         return {
-          q: `某量满足 A = ${P} e<sup>${f(k)}t</sup>。求 t = ${t} 时 A 的值，保留 3 位有效数字。`,
+          q: `A = ${P} e<sup>${f(k)}t</sup>，求 t = ${t} 时的 A，保留 3 位有效数字。`,
           answers: [{ lab: 'A', v: A, acc: 3 }],
           seq: `${P} pe ${k < 0 ? `neg ${-k}` : k} * ${t} R =`,
           work: `${P} × e<sup>${f(k)} × ${t}</sup> = ${f(A)}`,
@@ -248,7 +248,7 @@ const PRACTICE = (() => {
         const Sx = +(n * mean).toFixed(1), Sxx = +(n * (s * s + mean * mean)).toFixed(0);
         const sd = Math.sqrt(Sxx / n - (Sx / n) ** 2);
         return {
-          q: `一组数据 n = ${n}，Σ${X} = ${f(Sx)}，Σ${X}² = ${f(Sxx)}。求标准差，保留 3 位有效数字。`,
+          q: `n = ${n}，Σ${X} = ${f(Sx)}，Σ${X}² = ${f(Sxx)}，求标准差，保留 3 位有效数字。`,
           answers: [{ lab: '标准差', v: sd, acc: 3 }],
           seq: `sqrt frac ${Sxx} D ${n} R - ( frac ${Sx} D ${n} R ) sq R = sd`,
           work: `√(${f(Sxx)} ÷ ${n} − (${f(Sx)} ÷ ${n})²) = ${f(sd)}`,

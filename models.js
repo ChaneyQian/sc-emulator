@@ -51,7 +51,7 @@ const FN = {
 };
 for (const d of '0123456789') FN[d] = [`数字 ${d}`, d];
 for (const v of 'ABCDEF') FN['var' + v] = [`变量 ${v}`, v];
-// 没有模拟的功能：按下时屏幕提示“暂不支持”
+// 没有模拟的功能：按下时屏幕提示“还没做”
 const NA = {
   optn: 'OPTN 选项菜单', qr: 'QR Code', colon: ': 多语句', eng: 'ENG 工程记数法', hyp: 'hyp 双曲函数', ins: 'INS 插入 / 改写', undo: 'UNDO 撤消',
   const: 'CONST 科学常数', conv: 'CONV 单位换算', reset: 'RESET 复位', clr: 'CLR 清除', pol: 'Pol 极坐标', rec: 'Rec 直角坐标', drg: 'DRG▶ 角度换算',
@@ -78,8 +78,7 @@ const MODELS = {};
 /* ======================= fx-991EX ClassWiz ======================= */
 MODELS.ex = {
   id: 'ex', name: 'fx-991EX', series: 'ClassWiz', img: 'img/fx-991ex',
-  tagline: 'ClassWiz 经典款：MENU 数字选模式，SHIFT / ALPHA 双第二功能，CALC、S⇔D 都有独立按键。',
-  traits: ['MENU + 数字 / 字母选模式', 'CALC · SOLVE · S⇔D 独立键', '白色数字键，蓝色 DEL / AC'],
+  tagline: '按 MENU 再按数字选模式。CALC、S⇔D 都有单独的键，第二功能分 SHIFT 黄色和 ALPHA 红色。',
   exe: '=', implicitHigh: false, hasAlpha: true,
   keys: {
     shift: K('', 'shift', null, null, { cls: 'round', top: [['SHIFT', 'sh']] }),
@@ -155,8 +154,7 @@ MODELS.ex = {
 /* ======================= fx-991ES PLUS 2nd edition ======================= */
 MODELS.es = {
   id: 'es', name: 'fx-991ES PLUS', series: 'ES PLUS 2nd edition', img: 'img/fx-991es-plus',
-  tagline: 'Natural-V.P.A.M. 老款：MODE 文字菜单，变量 X 用 ALPHA ) 输入，绿色 DEL / AC。',
-  traits: ['MODE 文字列表选模式', 'X 变量：ALPHA + )', 'S⇔D 切换小数，SHIFT RCL 存变量'],
+  tagline: '老款。MODE 弹出文字菜单，变量 X 要先按 ALPHA 再按 )，存变量用 SHIFT RCL。',
   exe: '=', implicitHigh: true, hasAlpha: true, xName: 'X',
   keys: {
     shift: K('', 'shift', null, null, { cls: 'round', top: [['SHIFT', 'sh']] }),
@@ -229,8 +227,7 @@ MODELS.es = {
 const CAT = (cat, item) => ['catalog', { pick: cat }, { pick: item }];
 MODELS.cw = {
   id: 'cw', name: 'fx-991CW', series: 'ClassWiz CW', img: 'img/fx-991cw',
-  tagline: '新一代 ClassWiz：HOME 图标菜单 + OK 确认，没有 ALPHA，变量在 SHIFT + 数字键，EXE 执行、FORMAT 转换结果。',
-  traits: ['HOME 图标 + 方向键 + OK', 'CATALOG 查 d/dx、nCr 等函数', 'FUNCTION 定义 f(x) 代替 CALC'],
+  tagline: '没有 ALPHA 和 CALC 键。菜单用 HOME、方向键和 OK 选，d/dx、nCr 要去 CATALOG 里找。',
   exe: 'EXE', implicitHigh: false, hasAlpha: false, round: true,
   keys: {
     on: K('', 'on', null, null, { cls: 'sys on', top: [['ON', 'wh']] }),

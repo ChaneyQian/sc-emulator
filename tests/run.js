@@ -32,7 +32,7 @@ for (const m of Object.values(MODELS)) {
           else bad(m.id, `Q${q.n} ${p.lab}`, `step ${i - (s.expect.length - 1 - j)} (${st.fn})`, 'got', got, 'want', want);
         });
       });
-      const err = steps.find(s => /ERROR|暂不支持/.test(s.view.html));
+      const err = steps.find(s => /ERROR|还没做/.test(s.view.html));
       if (err) bad(m.id, `Q${q.n} ${p.lab}`, 'screen shows', err.view.html.replace(/<[^>]+>/g, ' ').slice(0, 80));
     }
   }

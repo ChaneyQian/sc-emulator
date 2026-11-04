@@ -26,7 +26,6 @@ function renderHome() {
         <p class="mc-series">${m.series}</p>
         <h2 class="mc-name">${m.name}</h2>
         <p class="mc-tag">${m.tagline}</p>
-        <ul class="mc-traits">${m.traits.map(t => `<li>${t}</li>`).join('')}</ul>
         <div class="mc-actions">
           <a class="btn primary" href="#/${id}/demo">按法演示</a>
           <a class="btn" href="#/${id}/free">自由模式</a>
@@ -105,9 +104,9 @@ function kbdFor(m, s) {
 }
 function caption(s, phase, extra = '') {
   const el = $('#cap'), m = S.model;
-  if (!s) { el.innerHTML = extra || '<div class="cap-t">选择一道题开始。</div>'; return; }
+  if (!s) { el.innerHTML = extra || '<div class="cap-t">先选一道题。</div>'; return; }
   if (phase === 'mod') {
-    el.innerHTML = `<div class="cap-k">${s.mod === 'sh' ? '<kbd class="kb sh">SHIFT</kbd>' : '<kbd class="kb al">ALPHA</kbd>'}</div><div class="cap-t">${s.mod === 'sh' ? '先按 SHIFT：下一键用它上方的黄色功能' : '先按 ALPHA：下一键用它上方的红色功能'}</div>`;
+    el.innerHTML = `<div class="cap-k">${s.mod === 'sh' ? '<kbd class="kb sh">SHIFT</kbd>' : '<kbd class="kb al">ALPHA</kbd>'}</div><div class="cap-t">${s.mod === 'sh' ? '先按 SHIFT，接下来用键上方黄色的功能' : '先按 ALPHA，接下来用键上方红色的功能'}</div>`;
     return;
   }
   el.innerHTML = `<div class="cap-k">${kbdFor(m, s)}</div><div class="cap-t">${esc(s.name)}</div>${s.note ? `<div class="cap-n"><span class="cap-tag">提示</span>${esc(s.note)}</div>` : ''}`;
@@ -217,16 +216,16 @@ function selectPart(j) {
   let snaps = [], err = '';
   try { snaps = p ? runPart(S.model, q.parts, j) : []; } catch (e) { err = e.message; }
   S.part = j;
-  $('#ptitle').textContent = p ? p.title : q.nocalc ? '本题没有按键步骤' : '';
-  load('demo', snaps, new Calc(S.model).view(), $('#chips'), err ? `按法生成出错：${esc(err)}` : '这道题只需要推理或作图，计算器保持空白。');
+  $('#ptitle').textContent = p ? p.title : q.nocalc ? '这题不用按计算器' : '';
+  load('demo', snaps, new Calc(S.model).view(), $('#chips'), err ? `按法生成出错：${esc(err)}` : '这题不用计算器。');
 }
 function captionDemoStart() {
   const q = S.q;
   if (!P.snaps.length) {
-    caption(null, null, q && q.nocalc ? `<div class="cap-k"><span class="cap-tag">不用按计算器</span></div><div class="cap-t">${esc(q.nocalc)}</div>` : '');
+    caption(null, null, q && q.nocalc ? `<div class="cap-k"><span class="cap-tag">不用计算器</span></div><div class="cap-t">${esc(q.nocalc)}</div>` : '');
     return;
   }
-  caption(null, null, `<div class="cap-k"><span class="cap-tag">${S.model.name} · 共 ${P.snaps.length} 步</span></div><div class="cap-t">按 ▶ 播放，或点右边的按键条逐步查看。空格 播放 / 暂停，← → 单步。</div>`);
+  caption(null, null, `<div class="cap-k"><span class="cap-tag">共 ${P.snaps.length} 步</span></div><div class="cap-t">点 ▶ 播放，也可以点下面的按键一步步看。</div>`);
 }
 const stepQ = d => {
   const list = allQ(), next = list[Math.min(Math.max(list.indexOf(S.q) + d, 0), list.length - 1)];
@@ -238,8 +237,8 @@ function keyInfo(id) { // 按法演示里点键：查看这个键的各项功能
   keyEl(id)?.classList.add('hl', 'm-n');
   const rows = [[k.fn && !['shift', 'alpha'].includes(k.fn) ? '' : null, k.fn], ['SHIFT', k.sh && k.sh[0]], ['ALPHA', k.al && k.al[0]]]
     .filter(([, f]) => f && !['shift', 'alpha'].includes(f))
-    .map(([mod, f]) => `<li>${mod ? `<kbd class="kb ${mod === 'SHIFT' ? 'sh' : 'al'}">${mod}</kbd> ` : ''}${esc(fmt(f))}${NA[f] ? '（模拟器未实现）' : ''}</li>`).join('');
-  const special = k.fn === 'shift' ? '下一键改用它上方的黄色功能。' : k.fn === 'alpha' ? '下一键改用它上方的红色功能（变量 A–F、x、y、M）。' : '';
+    .map(([mod, f]) => `<li>${mod ? `<kbd class="kb ${mod === 'SHIFT' ? 'sh' : 'al'}">${mod}</kbd> ` : ''}${esc(fmt(f))}${NA[f] ? '（还没做）' : ''}</li>`).join('');
+  const special = k.fn === 'shift' ? '接下来按的键用它上方黄色的功能。' : k.fn === 'alpha' ? '接下来按的键用它上方红色的功能，比如变量 A–F、x、y、M。' : '';
   $('#cap').innerHTML = `<div class="cap-k"><kbd class="kb ${(k.cls || '').includes('num') ? 'num' : ''}">${k.face && !/^<svg/.test(k.face) ? k.face : esc(keyName(m, id))}</kbd></div><div class="cap-t">${special}<ul class="key-fns">${rows}</ul></div>`;
 }
 
@@ -309,12 +308,12 @@ function enterFree() {
   updateLogMeta();
   updateSettings();
   $('#count').textContent = S.rec.steps.length ? `${S.rec.steps.length} 步` : '–';
-  caption(null, null, `<div class="cap-k"><span class="cap-tag">${S.model.name} · 自由模式</span></div><div class="cap-t">像真机一样直接按键。按过的键记在右边，按 ▶ 可以从头回放给学生看。</div>`);
+  caption(null, null, '<div class="cap-t">随便按。按过的键记在下面，点 ▶ 可以重放。</div>');
 }
 function copyLog() {
   const m = S.model;
   const txt = S.rec.steps.map(s => (s.mod === 'sh' ? 'SHIFT ' : s.mod === 'al' ? 'ALPHA ' : '') + (s.mod ? keyName(m, s.key) : s.chip || keyName(m, s.key))).join('  ');
-  const done = () => { $('#log-copy').textContent = '已复制 ✓'; setTimeout(() => { $('#log-copy').textContent = '复制按法'; }, 1600); };
+  const done = () => { $('#log-copy').textContent = '已复制'; setTimeout(() => { $('#log-copy').textContent = '复制'; }, 1600); };
   if (navigator.clipboard) navigator.clipboard.writeText(`${m.name}：${txt}`).then(done, () => prompt('复制下面的按法：', txt));
   else prompt('复制下面的按法：', txt);
 }
@@ -328,7 +327,7 @@ function renderTopics() {
 }
 function renderScore() {
   const s = PR.score;
-  $('#score').innerHTML = s.done ? `答对 <b>${s.right}</b> / ${s.done}　连对 <b>${s.streak}</b> <button type="button" class="link" id="score-reset">清零</button>` : '';
+  $('#score').innerHTML = s.done ? `对了 <b>${s.right}</b> / ${s.done} 题，连对 <b>${s.streak}</b>　<button type="button" class="link" id="score-reset">清零</button>` : '';
 }
 function newItem() {
   const pool = PRACTICE.filter(t => PR.sel.has(t.id));
@@ -337,8 +336,9 @@ function newItem() {
   Object.assign(PR, { topic: t, item: t.gen(), tries: 0, counted: false });
   renderPCard();
   if (S.mode === 'practice') toLive(null);
-  caption(null, null, `<div class="cap-k"><span class="cap-tag">${S.model.name} · 公式练习</span></div><div class="cap-t">用这台计算器算出答案，填在右边。卡住了可以按“看按法提示”。</div>`);
+  caption(null, null, '<div class="cap-t">用这台计算器算，答案填进下面的框。</div>');
 }
+const accNeed = a => (a.acc === 'exact' ? '写准确值' : a.acc === 'dp1' ? '保留 1 位小数' : `保留 ${a.acc} 位有效数字`);
 const accText = a => (a.acc === 'exact' ? '精确值' : a.acc === 'dp1' ? '保留 1 位小数' : `${a.acc} 位有效数字`);
 const fmtAns = a => (a.acc === 'exact' ? String(+a.v.toPrecision(12)) : a.acc === 'dp1' ? a.v.toFixed(1) : String(Number(a.v.toPrecision(a.acc)))).replace('-', '−');
 function renderPCard() {
@@ -349,16 +349,16 @@ function renderPCard() {
     <p class="pq">${it.q}</p>
     <form class="answers" id="ans-form" autocomplete="off">
       ${it.answers.map((a, j) => `<label class="ans"><span class="ans-l">${a.lab}</span><input type="text" inputmode="decimal" data-j="${j}" placeholder="${accText(a)}" spellcheck="false"><span class="ans-m" aria-live="polite"></span></label>`).join('')}
-      ${it.any ? '<p class="foot">两个解的顺序不限。</p>' : ''}
+      ${it.any ? '<p class="foot">两个解先写哪个都行。</p>' : ''}
       <div class="pc-actions">
         <button class="btn primary" type="submit">检查</button>
-        <button class="btn" type="button" id="p-hint">看按法提示</button>
-        <button class="btn ghost" type="button" id="p-show">显示答案</button>
-        <button class="btn ghost" type="button" id="p-next">下一题 ›</button>
+        <button class="btn" type="button" id="p-hint">看按法</button>
+        <button class="btn ghost" type="button" id="p-show">看答案</button>
+        <button class="btn ghost" type="button" id="p-next">换一题</button>
       </div>
     </form>
     <div class="feedback" id="p-fb" hidden></div>
-    <div class="hintbox" id="p-hintbox" hidden><p class="ptitle">按法提示 · ${S.model.name}</p><ol class="chips" id="hint-chips"></ol></div>`;
+    <div class="hintbox" id="p-hintbox" hidden><p class="ptitle">按法（${S.model.name}）</p><ol class="chips" id="hint-chips"></ol></div>`;
 }
 function checkItem() {
   const it = PR.item, inputs = $$('#ans-form input'), vals = inputs.map(i => parseAnswer(i.value));
@@ -371,7 +371,7 @@ function checkItem() {
     const blank = !inp.value.trim();
     inp.classList.toggle('ok', marks[j]);
     inp.classList.toggle('bad', !marks[j] && !blank);
-    inp.parentElement.querySelector('.ans-m').textContent = marks[j] ? '✓' : blank ? '' : Number.isNaN(vals[j]) ? '看不懂这个数' : '✗';
+    inp.parentElement.querySelector('.ans-m').textContent = marks[j] ? '✓' : blank ? '' : Number.isNaN(vals[j]) ? '不是数字' : '✗';
   });
   if (inputs.every(i => !i.value.trim())) { inputs[0].focus(); return; }
   const all = marks.every(Boolean);
@@ -387,8 +387,8 @@ function checkItem() {
   fb.hidden = false;
   fb.className = `feedback ${all ? 'good' : 'bad'}`;
   fb.innerHTML = all
-    ? `<b>✓ 正确</b><div class="work">${it.work}</div>`
-    : `<b>✗ 还不对</b>（注意 ${it.answers.map(accText).filter((v, j, a) => a.indexOf(v) === j).join(' / ')}）${PR.tries >= 2 ? '　可以看按法提示，或显示答案。' : ''}`;
+    ? `<b>对了。</b><div class="work">${it.work}</div>`
+    : `<b>还不对。</b>答案要${it.answers.map(accNeed).filter((v, j, a) => a.indexOf(v) === j).join('、')}。${PR.tries >= 2 ? '可以先看看按法。' : ''}`;
   if (all) $('#p-next').focus();
 }
 function revealItem() {
@@ -402,10 +402,10 @@ function revealItem() {
 }
 function hintItem() {
   let snaps = [];
-  try { snaps = runScript(S.model, PR.item.seq); } catch (e) { caption(null, null, `<div class="cap-t">提示生成出错：${esc(e.message)}</div>`); return; }
+  try { snaps = runScript(S.model, PR.item.seq); } catch (e) { caption(null, null, `<div class="cap-t">这题的按法出错了：${esc(e.message)}</div>`); return; }
   $('#p-hintbox').hidden = false;
   load('hint', snaps, new Calc(S.model).view(), $('#hint-chips'));
-  caption(null, null, `<div class="cap-k"><span class="cap-tag">按法提示 · 共 ${snaps.length} 步</span></div><div class="cap-t">正在播放提示。按计算器上任意键，回到你自己的计算。</div>`);
+  caption(null, null, `<div class="cap-k"><span class="cap-tag">提示，共 ${snaps.length} 步</span></div><div class="cap-t">按计算器上任意一个键，就回到你自己的算式。</div>`);
   play();
 }
 function enterPractice() {
@@ -413,7 +413,7 @@ function enterPractice() {
   renderScore();
   if (!PR.item) newItem();
   else { renderPCard(); toLive(null); }
-  caption(null, null, `<div class="cap-k"><span class="cap-tag">${S.model.name} · 公式练习</span></div><div class="cap-t">用这台计算器算出答案，填在右边。卡住了可以按“看按法提示”。</div>`);
+  caption(null, null, '<div class="cap-t">用这台计算器算，答案填进下面的框。</div>');
 }
 
 /* ================= 路由、视图 ================= */
@@ -438,7 +438,7 @@ function showHome() {
   delete document.body.dataset.model;
   $('#home').hidden = false;
   $('#app').hidden = true;
-  document.title = 'SC Emulator · Casio 计算器课堂模拟器';
+  document.title = 'SC Emulator · Casio 计算器模拟';
   scrollTo(0, 0);
 }
 function openModel(id, mode, qn) {
@@ -463,7 +463,7 @@ function openModel(id, mode, qn) {
   store.set('model', id);
   store.set('mode', mode);
   document.title = `${m.name} · ${MODE_NAMES[mode]} · SC Emulator`;
-  $('#imm-hint').textContent = mode === 'demo' ? '空格 播放 / 暂停　·　← → 单步　·　点屏幕 下一步　·　[ ] 换题　·　Esc 退出' : '直接点按键或用电脑键盘输入　·　Esc 退出';
+  $('#imm-hint').textContent = mode === 'demo' ? '空格 播放　← → 换步　点屏幕 下一步　Esc 退出' : '点按键或用键盘打　Esc 退出';
   if (mode === 'demo') {
     const n = qn != null ? qn : S.q ? S.q.n : store.get('q', 1);
     if (changed || modeChanged || !S.q || S.q.n !== n) selectQ(n, S.q && S.q.n === n ? S.part : 0);
@@ -487,7 +487,7 @@ function applyUI() {
   document.body.classList.toggle('picker-hidden', ui.pickerHidden);
   const bp = $('#btn-picker');
   bp.setAttribute('aria-expanded', String(!ui.pickerHidden));
-  bp.textContent = ui.pickerHidden ? '显示题目' : '隐藏题目';
+  bp.textContent = ui.pickerHidden ? '展开题目' : '收起题目';
   $('#btn-immersive').setAttribute('aria-pressed', String(ui.immersive));
   store.set('ui', { pickerHidden: ui.pickerHidden });
   requestAnimationFrame(fitScreen);
@@ -520,7 +520,7 @@ function init() {
   $('#btn-photo').addEventListener('click', () => {
     $('#photo-img').src = S.model.img + '.webp';
     $('#photo-img').alt = `${S.model.name} 实物照片`;
-    $('#photo-cap').textContent = `${S.model.name} 实物（CASIO 产品照片），可与左边的模拟器对照键位。`;
+    $('#photo-cap').textContent = `${S.model.name} 实物照片`;
     $('#photo').showModal();
   });
   $('#photo').addEventListener('click', e => { if (e.target === $('#photo')) $('#photo').close(); });
@@ -554,7 +554,7 @@ function init() {
   $('#log-replay').addEventListener('click', () => { startReplay(); stop(); show(-1); play(); });
   $('#log-copy').addEventListener('click', copyLog);
   $('#log-clear').addEventListener('click', () => { S.rec.steps.length = 0; S.base = S.live.view(); toLive($('#log')); updateLogMeta(); $('#count').textContent = '–'; });
-  $('#calc-reset').addEventListener('click', () => { resetLive(); toLive($('#log')); updateLogMeta(); updateSettings(); caption(null, null, '<div class="cap-t">计算器已重置：变量清零，角度制 Deg，自然显示。</div>'); });
+  $('#calc-reset').addEventListener('click', () => { resetLive(); toLive($('#log')); updateLogMeta(); updateSettings(); caption(null, null, '<div class="cap-t">已重置：变量清零，角度回到 Deg。</div>'); });
   $('#set-angle').addEventListener('click', e => { const b = e.target.closest('.seg-b'); if (!b || !S.live) return; S.live.angle = b.dataset.v; updateSettings(); paint(S.live.view()); });
   $('#set-io').addEventListener('click', e => {
     const b = e.target.closest('.seg-b');
