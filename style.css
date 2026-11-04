@@ -296,6 +296,7 @@ body.picker-hidden .picker { display: none; }
 
 /* 自由模式 */
 .setrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 14.5px; }
+.setrow.dim { opacity: .5; }
 .kbd-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); }
 #log { max-height: 260px; overflow: auto; padding: 3px; }
 
@@ -401,6 +402,17 @@ body.immersive:not([data-mode="demo"]) .imm-key:not(:empty) {
 .l1.sm { font-size: .8em; min-height: 0; }
 .l2 { position: absolute; right: 0; bottom: 0; max-width: 100%; white-space: nowrap; font-size: 6.2cqw; }
 .l2.in { font-size: 4.6cqw; }
+/* 线性显示（LineI/LineO）：每行等高，Normal Font 4 行、Small Font 6 行、ES PLUS 2 行 */
+.lines { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(var(--rows), 1fr); align-content: end; }
+.ll { display: flex; align-items: center; min-width: 0; min-height: 0; padding: 0; white-space: nowrap; overflow: hidden; line-height: 1; }
+.ll.r { justify-content: flex-end; }
+.lines.f-normal { font-size: 4.4cqw; }
+.lines.f-small { font-size: 3.1cqw; }
+.lines.f-es { font-size: 5.6cqw; }
+.lines.f-es .ll.r { font-size: 1.2em; }
+.lines .l1 { min-height: 0; padding-block: 0; }
+.lf { margin: 0 .04em; }
+.pg.mp { left: auto; right: 0; top: -4.6cqw; bottom: auto; }
 .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 .25em; font-size: .9em; line-height: 1.15; }
 .fn { padding: 0 .15em; }
 .fd { border-top: .3cqw solid currentColor; align-self: stretch; text-align: center; padding: .05em .15em 0; }

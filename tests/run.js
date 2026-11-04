@@ -56,6 +56,39 @@ if (vm.runInContext('typeof PRACTICE', ctx) !== 'undefined') {
     }
   }
 }
+// 线性显示（LineI/LineO）：从各机型的设置菜单进去，按线性写法输入，结果分数写成 a⌟b，其余为小数
+const LINE_CASES = [
+  ['1 frac 3 + 1 frac 6 =', '1⌟2'],
+  ['1 frac 3 + 1 frac 6 = sd', '0.5'],
+  ['2 pow 10 ) =', '1024'],
+  ['sqrt 2 ) =', '1.414213562'],
+  ['3 frac 2 frac 4 =', '7⌟2'],
+  ['logb 2 comma 8 ) =', '3'],
+  ['2 pow 3 ) frac 5 =', '8⌟5'],
+  ['neg 3 frac 4 =', '−3⌟4'],
+  ['ddx x cube comma 2 ) =', '12'],
+  ['int x sq comma 0 comma 3 ) =', '9'],
+  ['1.5 e10 neg 2 =', '3⌟200'],
+];
+for (const m of Object.values(MODELS)) {
+  for (const [seq, want] of LINE_CASES) {
+    let steps;
+    try { steps = runScript(m, `@line ${seq}`); } catch (e) { bad(m.id, 'line', seq, e.message); continue; }
+    const got = steps[steps.length - 1].view.res;
+    if (norm(got) === norm(want)) pass++; else bad(m.id, 'line', seq, 'got', got, 'want', want);
+  }
+  // MultiLine Font：Normal 最多 4 行、Small 最多 6 行；ES PLUS 没有这个设置，只有 2 行
+  const calc = new (vm.runInContext('Calc', ctx))(m);
+  const many = '1 + 1 = 2 + 2 = 3 + 3 = 4 + 4 =';
+  runScript(m, `@line ${many}`, calc);
+  const rows = () => (calc.view().html.match(/class="(l1 )?ll/g) || []).length;
+  const want = m.id === 'es' ? 2 : 4;
+  if (rows() === want) pass++; else bad(m.id, 'normal font rows', rows(), 'want', want);
+  if (m.macros.small) {
+    runScript(m, `@small ${many}`, calc);
+    if (calc.font === 'small' && rows() === 6) pass++; else bad(m.id, 'small font', calc.font, rows());
+  }
+}
 // 把结果记法近似成数值（只用于核对练习答案）
 function evalMd(s) {
   const js = norm(s).replace(/−/g, '-').replace(/\\f\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}\{([^{}]*)\}/g, '(($1)/($2))')

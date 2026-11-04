@@ -313,9 +313,16 @@ function updateLogMeta() {
 }
 function updateSettings() {
   if (!S.live) return;
-  $$('#set-angle .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v === S.live.angle));
-  $$('#set-io .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v === S.live.io));
+  const c = S.live;
+  $$('#set-angle .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v === c.angle));
+  $$('#set-input .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v === (c.line ? 'line' : 'math')));
+  $$('#set-io .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v === (c.decOut ? 'dec' : 'exact')));
+  $$('#set-font .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v === c.font));
+  $('#row-font').hidden = S.model.id === 'es'; // ES PLUS 没有 MultiLine Font
+  $('#row-font').classList.toggle('dim', !c.line);
 }
+// 输入方式 + 结果格式 → 官方的四种 Input/Output
+const ioOf = (line, dec) => (line ? (dec ? 'linedec' : 'line') : dec ? 'dec' : 'math');
 function enterFree() {
   toLive($('#log'));
   updateLogMeta();
@@ -569,11 +576,27 @@ function init() {
   $('#log-clear').addEventListener('click', () => { S.rec.steps.length = 0; S.base = S.live.view(); toLive($('#log')); updateLogMeta(); $('#count').textContent = '–'; });
   $('#calc-reset').addEventListener('click', () => { resetLive(); toLive($('#log')); updateLogMeta(); updateSettings(); caption(null, null, '<div class="cap-t">已重置：变量清零，角度回到 Deg。</div>'); });
   $('#set-angle').addEventListener('click', e => { const b = e.target.closest('.seg-b'); if (!b || !S.live) return; S.live.angle = b.dataset.v; updateSettings(); paint(S.live.view()); });
+  $('#set-input').addEventListener('click', e => {
+    const b = e.target.closest('.seg-b');
+    if (!b || !S.live || (b.dataset.v === 'line') === S.live.line) return;
+    S.live.setIO(ioOf(b.dataset.v === 'line', S.live.decOut)); // 换输入方式会清屏，和真机一样
+    updateSettings();
+    paint(S.live.view());
+  });
   $('#set-io').addEventListener('click', e => {
     const b = e.target.closest('.seg-b');
     if (!b || !S.live) return;
-    S.live.io = b.dataset.v;
-    if (S.live.scr.k === 'edit' && S.live.scr.ed.done) S.live.scr.dec = b.dataset.v === 'dec';
+    const c = S.live, dec = b.dataset.v === 'dec';
+    c.io = ioOf(c.line, dec);
+    if (c.scr.k === 'edit' && c.scr.ed.done) c.scr.dec = dec;
+    if (c.line && c.hist.length) c.hist[c.hist.length - 1].dec = dec;
+    updateSettings();
+    paint(c.view());
+  });
+  $('#set-font').addEventListener('click', e => {
+    const b = e.target.closest('.seg-b');
+    if (!b || !S.live) return;
+    S.live.font = b.dataset.v;
     updateSettings();
     paint(S.live.view());
   });

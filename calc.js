@@ -81,15 +81,22 @@ const INPUT = {
 };
 for (const d of '0123456789') INPUT[d] = ['ch', d];
 for (const [v, f] of Object.entries(FN_OF_VAR)) INPUT[f] = ['ch', v];
-function edInput(ed, fn) {
-  const op = INPUT[fn];
+// 线性输入（LineI/LineO、LineI/DecimalO）：没有模板，全部打成一行字符
+const INPUT_LINE = {
+  ...INPUT,
+  frac: ['opr', '⌟'], mixfrac: ['opr', '⌟'], sqrt: ['ch', '√('], cbrt: ['ch', '∛('], rt: ['opr', 'ˣ√('], pow: ['opr', '^('],
+  sq: ['opr', '²'], cube: ['opr', '³'], inv: ['opr', '⁻¹'], logb: ['ch', 'log('], p10: ['ch', '10^('], pe: ['ch', 'e^('], e10: ['ch', 'ᴇ'],
+  abs: ['ch', 'Abs('], ddx: ['ch', 'd/dx('], int: ['ch', '∫('], sum: ['ch', 'Σ('],
+};
+function edInput(ed, fn, map = INPUT) {
+  const op = map[fn];
   if (op[0] === 'post') ed.ins({ t: 'pow', s: [op[1].map(C)], fixed: true });
   else if (op[0] === 'tpl') ed.tpl(mkTpl(op[1]));
   else ed.ins(C(op[1]));
 }
 // 在输入行里处理输入、光标、删除；处理了返回 true
-function editKey(ed, fn) {
-  if (INPUT[fn]) { edInput(ed, fn); return true; }
+function editKey(ed, fn, map = INPUT) {
+  if (map[fn]) { edInput(ed, fn, map); return true; }
   if (fn === 'R') ed.right(); else if (fn === 'L') ed.left(); else if (fn === 'D') ed.vert(1); else if (fn === 'U') ed.vert(-1); else if (fn === 'del') ed.del();
   else return false;
   return true;
@@ -112,6 +119,7 @@ function ch(v) {
   if (v === 'nPr') return '<b class="pc">P</b>';
   if (v === 'nCr') return '<b class="pc">C</b>';
   if (v === 'f(' || v === 'g(') return `<i>${v[0]}</i>(`;
+  if (v === '⌟') return '<span class="lf">⌟</span>';
   return esc(v);
 }
 function rr(row, cur, top = false) {
@@ -173,7 +181,9 @@ class Calc {
     this.vars = Object.fromEntries(VAR_NAMES.map(v => [v, Engine.ZERO]));
     this.ans = Engine.ZERO;
     this.angle = 'D';
-    this.io = 'math';
+    this.io = 'math'; // math = MathI/MathO，dec = MathI/DecimalO，line = LineI/LineO，linedec = LineI/DecimalO
+    this.font = 'normal'; // MultiLine Font：线性显示时 normal 4 行、small 6 行
+    this.hist = []; // 线性显示时屏幕上方的历史算式
     this.frows = { f: null, g: null };
     this.range = [Engine.int(1), Engine.int(5), Engine.int(1)];
     this.tbl = null;
@@ -184,6 +194,17 @@ class Calc {
   }
   get opt() { return { implicitHigh: this.m.implicitHigh }; }
   get exe() { return this.m.exe; }
+  get line() { return this.io === 'line' || this.io === 'linedec'; }
+  get inmap() { return this.line ? INPUT_LINE : INPUT; }
+  get decOut() { return this.io === 'dec' || this.io === 'linedec'; }
+  // 换输入输出格式：真机会清屏，模板和线性两种写法不能混用
+  setIO(io) {
+    this.io = io;
+    this.hist = [];
+    let sc = this.scr;
+    while (sc && sc.back && (sc.k === 'menu' || sc.k === 'msg')) sc = sc.back;
+    if (sc && sc.k === 'edit') Object.assign(sc, this.editScr());
+  }
   env() {
     const fns = {};
     for (const k of ['f', 'g']) if (this.frows[k]) { try { fns[k] = Engine.compile(this.frows[k], this.opt); } catch (e) { /* 定义有误时调用会报错 */ } }
@@ -272,12 +293,13 @@ class Calc {
       const v = Engine.compile(ed.root, this.opt)(this.env());
       this.ans = v;
       sc.res = v;
-      sc.dec = dec || this.io === 'dec';
+      sc.dec = dec || this.decOut;
       ed.done = true;
+      if (this.line) this.hist = [...this.hist.slice(-9), { root: clone(ed.root), val: v, dec: sc.dec }];
     } catch (e) { this.fail(e, sc); }
   }
   input(fn) {
-    const sc = this.scr, ed = sc.ed, op = INPUT[fn];
+    const sc = this.scr, ed = sc.ed, op = this.inmap[fn];
     if (ed.done) {
       // 算完后直接按运算符，自动接上 Ans；按别的键则开始新算式
       const fromAns = op[0] === 'opr' || op[0] === 'post' || (op[0] === 'tpl' && op[1] === 'pow');
@@ -286,7 +308,7 @@ class Calc {
       sc.dec = false;
       if (fromAns) ed.ins(C('Ans'));
     }
-    edInput(ed, fn);
+    edInput(ed, fn, this.inmap);
   }
   reopen(atEnd) {
     const sc = this.scr, ed = sc.ed;
@@ -298,15 +320,16 @@ class Calc {
   }
   k_edit(fn) {
     const sc = this.scr, ed = sc.ed;
-    if (INPUT[fn]) { this.input(fn); return; }
+    if (this.inmap[fn]) { this.input(fn); return; }
     switch (fn) {
       case 'eq': this.exec(false); return;
       case 'approx': this.exec(true); return;
       case 'sd':
         if (!ed.done) this.exec(false);
-        if (this.scr === sc && ed.done && sc.res && Engine.hasExactForm(sc.res)) {
+        if (this.scr === sc && ed.done && sc.res && (this.line ? Engine.hasLineForm(sc.res) : Engine.hasExactForm(sc.res))) {
           sc.dec = !sc.dec;
-          this.desc = sc.dec ? 'S⇔D：换成小数' : 'S⇔D：换回分数 / 根式';
+          if (this.line && this.hist.length) this.hist[this.hist.length - 1].dec = sc.dec;
+          this.desc = sc.dec ? 'S⇔D：换成小数' : this.line ? 'S⇔D：换回分数' : 'S⇔D：换回分数 / 根式';
         }
         return;
       case 'R': case 'L':
@@ -314,7 +337,7 @@ class Calc {
         return;
       case 'U': case 'D': if (!ed.done) ed.vert(fn === 'D' ? 1 : -1); return;
       case 'del': if (ed.done) this.reopen(true); else ed.del(); return;
-      case 'ac': sc.ed = new Editor(); sc.res = null; sc.dec = false; return;
+      case 'ac': sc.ed = new Editor(); sc.res = null; sc.dec = false; this.hist = []; return;
       case 'menu': this.openMenu('main'); return;
       case 'setup': this.openMenu('setup'); return;
       case 'calc': this.startCalc(); return;
@@ -364,17 +387,27 @@ class Calc {
     if (!def) { this.msg(`还没做：${name}`); return; }
     let sel = 0;
     if (name === 'main') sel = Math.max(0, def.items.findIndex(it => it.act === 'app:' + this.app || (this.app === 'eqn' && it.act === 'menu:eqn')));
-    if (def.mark) sel = Math.max(0, def.items.findIndex(it => it.act === `${def.mark}:${def.mark === 'io' ? this.io : this.angle}`));
+    if (def.mark) sel = Math.max(0, def.items.findIndex(it => it.act === this.markOf(def)));
     this.scr = { k: 'menu', name, sel, back: this.scr };
   }
+  markOf(def) { return `${def.mark}:${{ io: this.io, angle: this.angle, font: this.font }[def.mark]}`; }
+  // fx-991EX 的 SETUP 每屏 4 项、每屏重新从 1 编号，▲▼ 翻屏
+  pageOf(def, j) { return def.perPage ? Math.floor(j / def.perPage) : 0; }
   exitMenus() { while (this.scr.k === 'menu' || this.scr.k === 'msg') this.scr = this.scr.back; return this.scr; }
   k_menu(fn, key) {
     const sc = this.scr, def = this.menuDef(sc.name), items = def.items;
     if (def.num) {
       const n = /^[0-9]$/.test(fn) ? fn : VAR_OF_FN[key.al && key.al[0]];
-      const j = n ? items.findIndex(it => it.n === n) : -1;
+      const page = this.pageOf(def, sc.sel);
+      const j = n ? items.findIndex((it, k) => it.n === n && this.pageOf(def, k) === page) : -1;
       if (j >= 0) { sc.sel = j; this.desc = `${n}：${gloss(items[j].key)}`; this.act(items[j]); return; }
       if (/^[0-9]$/.test(fn)) return;
+      if (def.perPage && (fn === 'U' || fn === 'D')) {
+        const last = this.pageOf(def, items.length - 1), p = Math.min(Math.max(page + (fn === 'D' ? 1 : -1), 0), last);
+        sc.sel = p * def.perPage;
+        this.desc = `${fn === 'D' ? '▼' : '▲'} 翻到第 ${p + 1} 屏`;
+        return;
+      }
     }
     const cols = def.kind === 'icons' ? def.cols : def.kind === 'text2' ? 2 : 1;
     const move = d => {
@@ -402,8 +435,8 @@ class Calc {
       case 'na': this.msg(`还没做：${item.key}`); return;
       case 'menu': this.openMenu(arg); return;
       case 'app': this.exitMenus(); if (arg === 'table') this.startTable(); else this.toCalc(); return;
-      case 'angle': case 'io':
-        if (a === 'angle') this.angle = arg; else this.io = arg;
+      case 'angle': case 'io': case 'font':
+        if (a === 'angle') this.angle = arg; else if (a === 'io') this.setIO(arg); else this.font = arg;
         if (this.m.id === 'cw') { this.scr = this.scr.back; return; } // ClassWiz CW：回到上一级列表，按 AC 退出
         this.exitMenus();
         if (this.app === 'calc') this.toCalc();
@@ -419,7 +452,12 @@ class Calc {
         return;
       }
       case 'varrcl': this.exitMenus(); this.dispatch(FN_OF_VAR[arg], {}); return;
-      case 'fmt': { const sc = this.exitMenus(); if (sc.k === 'edit') sc.dec = arg === 'dec'; else if (sc.k === 'eqres') sc.dec = arg === 'dec'; return; }
+      case 'fmt': {
+        const sc = this.exitMenus();
+        if (sc.k === 'edit' || sc.k === 'eqres') sc.dec = arg === 'dec';
+        if (sc.k === 'edit' && this.line && this.hist.length) this.hist[this.hist.length - 1].dec = sc.dec;
+        return;
+      }
       case 'range': this.exitMenus(); this.startRange(); return;
       case 'recalc': this.exitMenus(); this.genTable(); return;
     }
@@ -434,7 +472,7 @@ class Calc {
   coefLabel(sc, r, c) { return sc.type === 'poly' ? 'abcde'[c] : 'abcd'[c] + subN(r + 1); }
   k_coef(fn) {
     const sc = this.scr;
-    if (INPUT[fn] || (sc.ed && ['L', 'R', 'del'].includes(fn))) { if (!sc.ed) sc.ed = new Editor(); editKey(sc.ed, fn); return; }
+    if (this.inmap[fn] || (sc.ed && ['L', 'R', 'del'].includes(fn))) { if (!sc.ed) sc.ed = new Editor(); editKey(sc.ed, fn, this.inmap); return; }
     const commit = () => {
       if (!sc.ed || !sc.ed.root.length) { sc.ed = null; return true; }
       try { sc.vals[sc.r][sc.c] = Engine.compile(sc.ed.root, this.opt)(this.env()); } catch (e) { this.fail(e, sc); sc.ed = null; return false; }
@@ -520,7 +558,7 @@ class Calc {
   }
   k_prompt(fn) {
     const sc = this.scr;
-    if (INPUT[fn] || (sc.ed && ['L', 'R', 'del'].includes(fn))) { if (!sc.ed) sc.ed = new Editor(); editKey(sc.ed, fn); return; }
+    if (this.inmap[fn] || (sc.ed && ['L', 'R', 'del'].includes(fn))) { if (!sc.ed) sc.ed = new Editor(); editKey(sc.ed, fn, this.inmap); return; }
     if (fn === 'ac') { this.scr = sc.back; return; }
     if (fn !== 'eq') return;
     const name = sc.vars[sc.i];
@@ -563,7 +601,7 @@ class Calc {
   }
   k_fdef(fn) {
     const sc = this.scr;
-    if (editKey(sc.ed, fn)) return;
+    if (editKey(sc.ed, fn, this.inmap)) return;
     switch (fn) {
       case 'eq': {
         if (sc.ed.root.length) {
@@ -590,7 +628,7 @@ class Calc {
   startRange() { this.scr = { k: 'range', i: 0, ed: null }; }
   k_range(fn) {
     const sc = this.scr, cw = this.m.id === 'cw';
-    if (INPUT[fn] || (sc.ed && ['L', 'R', 'del'].includes(fn))) { if (!sc.ed) sc.ed = new Editor(); editKey(sc.ed, fn); return; }
+    if (this.inmap[fn] || (sc.ed && ['L', 'R', 'del'].includes(fn))) { if (!sc.ed) sc.ed = new Editor(); editKey(sc.ed, fn, this.inmap); return; }
     const name = ['Start', 'End', 'Step'][sc.i];
     switch (fn) {
       case 'eq': case 'ok':
@@ -651,14 +689,31 @@ class Calc {
     const html = this.off ? '' : this['v_' + this.scr.k]();
     return {
       html, res: this.lastMd, off: this.off,
-      ind: { s: this.mod === 'sh', a: this.mod === 'al', sto: this.pending === 'sto', rcl: this.pending === 'rcl', m: this.vars.M.v !== 0, angle: this.angle, math: this.io === 'math' },
+      ind: { s: this.mod === 'sh', a: this.mod === 'al', sto: this.pending === 'sto', rcl: this.pending === 'rcl', m: this.vars.M.v !== 0, angle: this.angle, math: this.io === 'math' || this.io === 'dec' },
     };
   }
   fmtVal(v, dec) { const s = Engine.display(v, dec); this.lastMd = s; return md(s); }
   v_edit() {
+    if (this.line) return this.v_line();
     const sc = this.scr, ed = sc.ed;
     const res = ed.done && sc.res ? this.fmtVal(sc.res, sc.dec) : '';
     return `<div class="l1">${ed.prefix}${rr(ed.root, ed.cursor(), true)}</div><div class="l2">${res}</div>`;
+  }
+  // 线性显示：ClassWiz 把算过的式子和结果一行行往上推，Normal Font 4 行、Small Font 6 行；ES PLUS 只有算式一行、结果一行
+  v_line() {
+    const sc = this.scr, ed = sc.ed, es = this.m.id === 'es';
+    const rows = es ? 2 : this.font === 'small' ? 6 : 4;
+    const resOf = h => (h.dec ? Engine.display(h.val, true) : Engine.displayLine(h.val));
+    const last = this.hist[this.hist.length - 1];
+    if (ed.done && sc.res && last) this.lastMd = resOf(last);
+    const input = `<div class="l1 ll">${rr(ed.root, ed.cursor(), true)}</div>`;
+    let lines;
+    if (es) lines = [input, `<div class="ll r">${ed.done && last ? md(resOf(last)) : ''}</div>`];
+    else {
+      lines = this.hist.flatMap(h => [`<div class="ll">${rr(h.root, null, true)}</div>`, `<div class="ll r">${md(resOf(h))}</div>`]);
+      if (!ed.done) lines.push(input);
+    }
+    return `<div class="lines f-${es ? 'es' : this.font}" style="--rows:${rows}">${lines.slice(-rows).join('')}</div>`;
   }
   v_stored() { const sc = this.scr; return `<div class="l1">Ans→<i>${sc.v}</i></div><div class="l2">${this.fmtVal(sc.val)}</div>`; }
   v_msg() { return `<div class="msg">${esc(this.scr.text)}</div><div class="eh">按任意键返回</div>`; }
@@ -679,12 +734,13 @@ class Calc {
     if (def.kind === 'text2') {
       return `<div class="lst t2">${items.map(it => `<div class="li">${it.n}:${it.lab}</div>`).join('')}</div>`;
     }
-    const rows = this.m.id === 'es' ? 3 : 4;
-    const first = Math.max(0, Math.min(sc.sel - rows + 1, items.length - rows));
+    const rows = def.perPage || (this.m.id === 'es' ? 3 : 4);
+    const first = def.perPage ? this.pageOf(def, sc.sel) * rows : Math.max(0, Math.min(sc.sel - rows + 1, items.length - rows));
     const cursor = !def.num;
-    const mark = def.mark ? `${def.mark}:${def.mark === 'io' ? this.io : this.angle}` : null;
+    const mark = def.mark ? this.markOf(def) : null;
     const vis = items.slice(first, first + rows);
-    const bar = items.length > rows ? `<div class="sb"><span style="top:${(first / items.length) * 100}%;height:${(rows / items.length) * 100}%"></span></div>` : '';
+    const bar = def.perPage ? `<div class="pg mp">${first > 0 ? '▲' : ''}${first + rows < items.length ? '▼' : ''}</div>`
+      : items.length > rows ? `<div class="sb"><span style="top:${(first / items.length) * 100}%;height:${(rows / items.length) * 100}%"></span></div>` : '';
     return `<div class="lst">${def.title ? `<div class="lt">${def.title}</div>` : ''}${vis.map((it, j) => `<div class="li${cursor && first + j === sc.sel ? ' on' : ''}">${it.n ? it.n + ':' : ''}${it.lab}${mark && it.act === mark ? '<span class="dm">◆</span>' : ''}</div>`).join('')}</div>${bar}`;
   }
   v_coef() {
@@ -783,6 +839,7 @@ function runScript(model, seq, calc = new Calc(model)) {
     if (j < 0) throw new Error(`菜单里没有 ${target}`);
     if (def.num) {
       const n = items[j].n;
+      for (let p = calc.pageOf(def, sc.sel); p !== calc.pageOf(def, j); p += p < calc.pageOf(def, j) ? 1 : -1) pressFn(p < calc.pageOf(def, j) ? 'D' : 'U');
       if (/^\d$/.test(n)) pressFn(n);
       else pressKey(Object.keys(model.keys).find(id => model.keys[id].al && model.keys[id].al[0] === 'var' + n));
       return;

@@ -16,6 +16,12 @@ fx-991CW、fx-991EX、fx-991ES PLUS（2nd edition）三款 Casio 科学计算器
 
 普通计算（自然显示输入、分数 / 根式 / π 精确结果、S⇔D / FORMAT、≈）、乘方与根、log / ln、三角与反三角（角度 / 弧度）、nCr、nPr、x!、Abs、d/dx、∫、Σ、Ans、变量 A–F、x、y、M（STO / RCL / VARIABLE）、CALC、SOLVE、CW 的 f(x) / g(x)；方程模式（二次、三次、二元 / 三元一次）；表格模式。统计、矩阵、复数等模式还没做，按了会在屏幕上提示。
 
+四种输入输出格式都能切换：MathI/MathO、MathI/DecimalO、LineI/LineO、LineI/DecimalO（ES PLUS 是 MthIO / LineIO）。线性显示时整行输入，分数写成 `2⌟3`，其余结果给小数；ClassWiz 会把算过的式子往上推，字号由 MultiLine Font 决定：Normal Font 最多 4 行，Small Font 最多 6 行。
+
+- fx-991EX：SETUP → ▼▼▼ → 1:MultiLine Font（SETUP 每屏 4 项、每屏从 1 编号）
+- fx-991CW：SETTINGS → System Settings → MultiLine Font
+- fx-991ES PLUS 没有这个设置，线性显示固定两行
+
 CW 的菜单路径（HOME、SETTINGS、CATALOG、VARIABLE、FUNCTION、TOOLS）按 Casio 官方说明书整理；CATALOG 里分类的排列顺序、VARIABLE 子菜单里 Store / Recall 的先后没有在说明书正文里写明，以真机为准。
 
 ## 快捷键

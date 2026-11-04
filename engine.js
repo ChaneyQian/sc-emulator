@@ -293,7 +293,10 @@ const Engine = (() => {
   /* ---------- 词法 + 语法：编辑器的一行 → 求值函数 env => 值 ----------
    * 优先级（高 → 低）：括号/函数/模板，后缀（x² x⁻¹ ! % 乘方），(−)，nPr nCr，省略乘号，× ÷，+ −
    * implicitHigh：ES PLUS 的省略乘号优先于 × ÷；ClassWiz 与 × ÷ 同级、从左到右。 */
-  const FUNCS = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'sin⁻¹(': 'asin', 'cos⁻¹(': 'acos', 'tan⁻¹(': 'atan', 'ln(': 'ln', 'log(': 'log', 'Abs(': 'abs', 'Rnd(': 'rnd', 'RanInt#(': 'ranint', 'f(': 'f', 'g(': 'g' };
+  // 线性输入（LineI）时，模板换成字符：√( ∛( 10^( e^( 是函数，^( ˣ√( ² ³ ⁻¹ 是后缀，⌟ 是分数线，ᴇ 是 ×10 的乘方
+  const FUNCS = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'sin⁻¹(': 'asin', 'cos⁻¹(': 'acos', 'tan⁻¹(': 'atan', 'ln(': 'ln', 'log(': 'log', 'Abs(': 'abs', 'Rnd(': 'rnd', 'RanInt#(': 'ranint', 'f(': 'f', 'g(': 'g',
+    '√(': 'sqrt', '∛(': 'cbrt', '10^(': 'p10', 'e^(': 'pe' };
+  const CALCULUS = new Set(['d/dx(', '∫(', 'Σ(']);
   const VARS = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'x', 'y', 'z', 'M']);
   function lex(row) {
     const out = [];
@@ -324,7 +327,7 @@ const Engine = (() => {
       if (!t) return false;
       if (t.k === 'num') return true;
       if (t.k === 'tpl') return !['pow', 'e10'].includes(t.node.t);
-      return t.v === '(' || t.v === 'neg' || t.v in FUNCS || VARS.has(t.v) || ['π', 'e', 'Ans', 'Ran#'].includes(t.v);
+      return t.v === '(' || t.v === 'neg' || t.v in FUNCS || CALCULUS.has(t.v) || VARS.has(t.v) || ['π', 'e', 'Ans', 'Ran#'].includes(t.v);
     }
     function expr() {
       let a = muldiv();
@@ -360,13 +363,26 @@ const Engine = (() => {
     function unary() {
       if (sym('neg') || sym('−')) { i++; const a = unary(); return env => neg(a(env)); }
       if (sym('+')) { i++; return unary(); }
-      return postfix();
+      return fraction();
+    }
+    function fraction() { // 线性分数 a⌟b、带分数 a⌟b⌟c：比乘方低、比 (−) 高
+      const a = postfix();
+      if (!sym('⌟')) return a;
+      i++;
+      const b = postfix();
+      if (!sym('⌟')) return env => div(a(env), b(env));
+      i++;
+      const c = postfix();
+      return env => { const W = a(env), F = div(b(env), c(env)); return W.v < 0 ? sub(W, F) : add(W, F); };
     }
     function postfix() {
       let a = atom();
       for (;;) {
         const t = peek(), l = a;
         if (t && t.k === 'tpl' && t.node.t === 'pow') { i++; const e = need(t.node.s[0]); a = env => pow(l(env), e(env)); }
+        else if (sym('^(')) { i++; const e = expr(); closeParen(); a = env => pow(l(env), e(env)); }
+        else if (sym('ˣ√(')) { i++; const r = expr(); closeParen(); a = env => root(r(env), l(env)); }
+        else if (sym('²') || sym('³') || sym('⁻¹')) { const k = { '²': 2, '³': 3, '⁻¹': -1 }[toks[i++].v]; a = env => pow(l(env), int(k)); }
         else if (sym('!')) { i++; a = env => factorial(l(env)); }
         else if (sym('%')) { i++; a = env => div(l(env), int(100)); }
         else return a;
@@ -377,6 +393,16 @@ const Engine = (() => {
       let a = literal(t.s);
       const n = peek();
       if (n && n.k === 'tpl' && n.node.t === 'e10') { i++; const e = need(n.node.s[0]); const base = a; return env => mul(base, pow(TEN, e(env))); }
+      if (sym('ᴇ')) { // 线性的 ×10ˣ：3ᴇ−5
+        i++;
+        const minus = sym('neg') || sym('−');
+        if (minus) i++;
+        const d = peek();
+        if (!d || d.k !== 'num') fail('Syntax ERROR');
+        i++;
+        const v = mul(a, pow(TEN, minus ? neg(literal(d.s)) : literal(d.s)));
+        return () => v;
+      }
       if (sym('°')) { // 度分秒：12°30°15° = 12 + 30/60 + 15/3600
         i++;
         let parts = [a], k = 60;
@@ -401,6 +427,13 @@ const Engine = (() => {
         closeParen();
         return env => call(name, a(env), b && b(env), env);
       }
+      if (CALCULUS.has(v)) { // 线性的 d/dx(f, a)、∫(f, a, b)、Σ(f, a, b)
+        const f = expr(), args = [];
+        while (sym(',')) { i++; args.push(expr()); }
+        closeParen();
+        if (args.length < (v === 'd/dx(' ? 1 : 2)) fail('Syntax ERROR');
+        return v === 'd/dx(' ? dDx(f, args[0]) : v === '∫(' ? integral(f, args[0], args[1]) : sigma(f, args[0], args[1]);
+      }
       if (v === 'π') return () => PI;
       if (v === 'e') return () => E;
       if (v === 'Ans') return env => env.ans;
@@ -419,27 +452,21 @@ const Engine = (() => {
         case 'p10': { const e = need(s[0]); return env => pow(TEN, e(env)); }
         case 'pe': { const e = need(s[0]); return env => expE(e(env)); }
         case 'abs': { const a = need(s[0]); return env => abs(a(env)); }
-        case 'ddx': {
-          const f = need(s[0]), at = need(s[1]);
-          return env => { const a = at(env).v; return V(deriv(x => f(withX(env, V(x))).v, a)); };
-        }
-        case 'int': {
-          const f = need(s[0]), lo = need(s[1]), hi = need(s[2]);
-          return env => V(integrate(x => f(withX(env, V(x))).v, lo(env).v, hi(env).v));
-        }
-        case 'sum': {
-          const f = need(s[0]), lo = need(s[1]), hi = need(s[2]);
-          return env => {
-            const a = intVal(lo(env)), b = intVal(hi(env));
-            if (a == null || b == null || b < a || b - a > 100000n) fail('Math ERROR');
-            let acc = ZEROV;
-            for (let k = a; k <= b; k++) acc = add(acc, f(withX(env, fromQ(Q(k)))));
-            return acc;
-          };
-        }
+        case 'ddx': return dDx(need(s[0]), need(s[1]));
+        case 'int': return integral(need(s[0]), need(s[1]), need(s[2]));
+        case 'sum': return sigma(need(s[0]), need(s[1]), need(s[2]));
       }
       fail('Syntax ERROR');
     }
+    const dDx = (f, at) => env => V(deriv(x => f(withX(env, V(x))).v, at(env).v));
+    const integral = (f, lo, hi) => env => V(integrate(x => f(withX(env, V(x))).v, lo(env).v, hi(env).v));
+    const sigma = (f, lo, hi) => env => {
+      const a = intVal(lo(env)), b = intVal(hi(env));
+      if (a == null || b == null || b < a || b - a > 100000n) fail('Math ERROR');
+      let acc = ZEROV;
+      for (let k = a; k <= b; k++) acc = add(acc, f(withX(env, fromQ(Q(k)))));
+      return acc;
+    };
     const fn = toks.length ? expr() : null;
     if (!fn || i < toks.length) fail('Syntax ERROR');
     return fn;
@@ -452,6 +479,10 @@ const Engine = (() => {
       case 'ln': return ln(a);
       case 'log': return b ? logb(a, b) : log10(a);
       case 'abs': return abs(a);
+      case 'sqrt': return sqrt(a);
+      case 'cbrt': return root(a, int(3));
+      case 'p10': return pow(TEN, a);
+      case 'pe': return expE(a);
       case 'rnd': return rnd(a);
       case 'ranint': {
         const lo = intVal(a), hi = b && intVal(b);
@@ -601,7 +632,15 @@ const Engine = (() => {
     return fmtDec(val.v);
   }
   const hasExactForm = val => !!(val.x && fmtExact(val.x) && fmtExact(val.x) !== fmtDec(val.v));
+  // LineO：只有分数保留（写成 a⌟b），根式、π 一律给小数
+  function lineFrac(val) {
+    const r = ratVal(val);
+    if (!r || r.d === 1n) return null;
+    const n = babs(r.n);
+    return digits(n) + digits(r.d) <= 10 ? `${r.n < 0n ? '−' : ''}${n}⌟${r.d}` : null;
+  }
+  const displayLine = (val, dec = false) => (!dec && lineFrac(val)) || display(val, true);
 
-  return { CalcError, fail, compile, Q, V, fromQ, int, literal, ZERO: ZEROV, ONE, add, sub, mul, div, neg, pow, sqrt, display, fmtDec, hasExactForm, quadratic, cubic, simul, solve, isRatVal: a => !!ratVal(a) };
+  return { CalcError, fail, compile, Q, V, fromQ, int, literal, ZERO: ZEROV, ONE, add, sub, mul, div, neg, pow, sqrt, display, displayLine, hasLineForm: v => !!lineFrac(v), fmtDec, hasExactForm, quadratic, cubic, simul, solve, isRatVal: a => !!ratVal(a) };
 })();
 if (typeof module !== 'undefined') module.exports = Engine;

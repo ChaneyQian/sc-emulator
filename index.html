@@ -115,8 +115,10 @@
         <div class="card">
           <div class="card-h"><h3>设置</h3></div>
           <div class="setrow"><span>角度单位</span><div class="seg sm" id="set-angle"><button type="button" class="seg-b" data-v="D">Deg</button><button type="button" class="seg-b" data-v="R">Rad</button></div></div>
-          <div class="setrow"><span>结果</span><div class="seg sm" id="set-io"><button type="button" class="seg-b" data-v="math">分数、根式</button><button type="button" class="seg-b" data-v="dec">小数</button></div></div>
-          <p class="foot">这里改是图方便。要教学生自己设置，请在计算器上进 SETUP（CW 是 SETTINGS）。</p>
+          <div class="setrow"><span>输入</span><div class="seg sm" id="set-input"><button type="button" class="seg-b" data-v="math">自然显示</button><button type="button" class="seg-b" data-v="line">线性</button></div></div>
+          <div class="setrow"><span>结果</span><div class="seg sm" id="set-io"><button type="button" class="seg-b" data-v="exact">分数、根式</button><button type="button" class="seg-b" data-v="dec">小数</button></div></div>
+          <div class="setrow" id="row-font" title="MultiLine Font：只在线性显示时起作用"><span>线性字号</span><div class="seg sm" id="set-font"><button type="button" class="seg-b" data-v="normal">正常（4 行）</button><button type="button" class="seg-b" data-v="small">小（6 行）</button></div></div>
+          <p class="foot">这里改是图方便。要教学生自己设置，请在计算器上进 SETUP（CW 是 SETTINGS）。线性字号对应真机的 MultiLine Font，只在线性显示时起作用。</p>
           <button type="button" class="btn sm ghost" id="calc-reset" title="清空变量，设置恢复默认">重置计算器</button>
         </div>
         <div class="card">
@@ -126,7 +128,7 @@
             <li><kbd>^</kbd> 乘方　<kbd>Enter</kbd> =　<kbd>Backspace</kbd> DEL　<kbd>Delete</kbd> AC</li>
             <li><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> 方向键　<kbd>F</kbd> 全屏</li>
           </ul>
-          <p class="foot">能算分数、根式、π、CALC、SOLVE、d/dx、∫、Σ、变量、方程和表格。统计、矩阵、复数还没做，按了会提示。</p>
+          <p class="foot">能算分数、根式、π、CALC、SOLVE、d/dx、∫、Σ、变量、方程和表格，自然显示和线性显示都行。统计、矩阵、复数还没做，按了会提示。</p>
         </div>
       </div>
     </section>
