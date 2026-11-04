@@ -40,7 +40,13 @@ CW 的菜单路径（HOME、SETTINGS、CATALOG、VARIABLE、FUNCTION、TOOLS）�
 - `practice.js`：Y12 公式练习的出题器
 - `app.js`：页面、播放器、三种模式
 - `img/`：产品照片（CASIO 产品图裁剪、压缩成 WebP）
+- `vendor/katex/`：KaTeX 0.18.11（MIT），用来排版公式，随网站一起发布，不依赖 CDN
 - `tests/run.js`：`node tests/run.js` 把每道题、每类练习在三款机型上各按一遍，核对屏幕结果
+- `tests/tex.js`：`node tests/tex.js` 检查所有公式能不能正常排版
+
+## 公式写法
+
+题目标题、答案、题型名和练习题里的公式都用 LaTeX，写在 `$…$` 里（单独一行用 `$$…$$`），例如 `$y=\dfrac{k}{(x-1)^3}$`。带反斜杠的字符串用 ``String.raw`…` ``，免得 `\frac` 里的反斜杠被吃掉。改完跑一下 `node tests/tex.js`。
 
 纯静态网页，直接双击 `index.html` 也能离线使用。推送到 `main` 后由 `.github/workflows/pages.yml` 自动发布到 GitHub Pages。
 

@@ -76,6 +76,10 @@ kbd {
 }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 i { font-family: var(--f-math); }
+/* KaTeX 公式：默认 1.21em 比中文大太多，压到和正文相称 */
+.katex { font-size: 1.08em; }
+.katex-display { margin: .3em 0; overflow-x: auto; overflow-y: hidden; padding: .1em 0; }
+.pill .katex, .gl .katex, .tag .katex { font-size: 1em; }
 
 /* ================= 按钮与分段控件 ================= */
 .btn {
@@ -306,7 +310,9 @@ body.picker-hidden .picker { display: none; }
 .pill[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); }
 .pcard .qh { margin-bottom: 12px; }
 .pc-name { font: 700 16px/1.3 var(--f-display); margin-left: 4px; }
-.formula { padding: 10px 14px; border-radius: 10px; background: var(--surface-2); border-left: 3px solid var(--accent); font: 400 18px/1.6 var(--f-math); color: var(--ink); overflow-x: auto; }
+.formula { padding: 10px 16px; border-radius: 10px; background: var(--surface-2); border-left: 3px solid var(--accent); font-size: 16px; line-height: 1.7; color: var(--ink); overflow-x: auto; }
+.formula .katex-display { margin: .15em 0; text-align: left; }
+.formula .katex-display > .katex { text-align: left; font-size: 1.18em; }
 .ffrac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; line-height: 1.25; }
 .ffrac > span + span { border-top: 1px solid currentColor; }
 .pq { margin: 14px 0 6px; font-size: 16.5px; line-height: 1.7; }
@@ -332,7 +338,7 @@ body.picker-hidden .picker { display: none; }
 .feedback.good b { color: var(--good); }
 .feedback.bad { background: var(--bad-soft); border-color: transparent; }
 .feedback.bad b { color: var(--bad); }
-.work { margin-top: 6px; font: 400 16px/1.7 var(--f-math); }
+.work { margin-top: 6px; font-size: 15px; line-height: 2; }
 .hintbox { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line-2); }
 
 /* 实物照片对照 */

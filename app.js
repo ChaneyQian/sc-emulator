@@ -11,6 +11,19 @@ const store = {
 };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const strip = h => String(h).replace(/<[^>]+>/g, '');
+/* 文字里的公式：$…$ 行内、$$…$$ 单独一行，用 KaTeX 排版；其余文字照常转义。KaTeX 没加载时显示原式 */
+function rich(src) {
+  return String(src ?? '').split(/(\$\$[^$]+\$\$|\$[^$]+\$)/).map((part, i) => {
+    if (i % 2 === 0) return esc(part);
+    const display = part.startsWith('$$'), tex = part.slice(display ? 2 : 1, display ? -2 : -1);
+    if (typeof katex === 'undefined') return esc(tex);
+    return katex.renderToString(tex, { displayMode: display, throwOnError: false, strict: 'ignore' });
+  }).join('');
+}
+// 提示框（title 属性）里用的纯文字版
+const plainTex = s => String(s ?? '')
+  .replace(/\\[dt]?frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2').replace(/\\tfrac(\d)(\d)/g, '$1/$2')
+  .replace(/\\sqrt\{([^}]*)\}/g, '√($1)').replace(/\\([a-zA-Z]+)/g, '$1').replace(/[{}$^]/g, '');
 
 // S：当前机型 / 模式 / 自由计算器；P：播放器（按法演示、练习提示、自由模式回放共用）
 const S = { model: null, mode: null, live: null, rec: null, base: null, q: null, part: 0 };
@@ -109,7 +122,7 @@ function caption(s, phase, extra = '') {
     el.innerHTML = `<div class="cap-k">${s.mod === 'sh' ? '<kbd class="kb sh">SHIFT</kbd>' : '<kbd class="kb al">ALPHA</kbd>'}</div><div class="cap-t">${s.mod === 'sh' ? '先按 SHIFT，接下来用键上方黄色的功能' : '先按 ALPHA，接下来用键上方红色的功能'}</div>`;
     return;
   }
-  el.innerHTML = `<div class="cap-k">${kbdFor(m, s)}</div><div class="cap-t">${esc(s.name)}</div>${s.note ? `<div class="cap-n"><span class="cap-tag">提示</span>${esc(s.note)}</div>` : ''}`;
+  el.innerHTML = `<div class="cap-k">${kbdFor(m, s)}</div><div class="cap-t">${esc(s.name)}</div>${s.note ? `<div class="cap-n"><span class="cap-tag">提示</span>${rich(s.note)}</div>` : ''}`;
   const pill = $('#imm-key');
   pill.innerHTML = `${kbdFor(m, s)}<span class="ik-t">${esc(s.name)}</span>`;
 }
@@ -187,7 +200,7 @@ function renderNav() {
   let h = `<div class="grp"><div class="gl">准备</div><div class="gq"><button type="button" class="qb wide" data-q="0">角度制</button></div></div>`;
   for (const [g, label] of GROUPS) {
     const qs = QUESTIONS.filter(q => q.g === g);
-    h += `<div class="grp"><div class="gl">${label}</div><div class="gq">${qs.map(q => `<button type="button" class="qb${q.parts ? '' : ' nc'}${q.paper === 'NC' ? ' ncp' : ''}" data-q="${q.n}" title="${esc(`${q.src} · ${q.topic}`)}">${q.n}</button>`).join('')}</div></div>`;
+    h += `<div class="grp"><div class="gl">${label}</div><div class="gq">${qs.map(q => `<button type="button" class="qb${q.parts ? '' : ' nc'}${q.paper === 'NC' ? ' ncp' : ''}" data-q="${q.n}" title="${esc(`${q.src} · ${plainTex(q.topic)}`)}">${q.n}</button>`).join('')}</div></div>`;
   }
   $('#qnav').innerHTML = h;
 }
@@ -201,10 +214,10 @@ function selectQ(n, part = 0) {
   const move = `<span class="qmove"><button type="button" class="btn sm" data-qstep="-1"${at === 0 ? ' disabled' : ''} title="上一题（[）">‹ 上一题</button><button type="button" class="btn sm" data-qstep="1"${at === list.length - 1 ? ' disabled' : ''} title="下一题（]）">下一题 ›</button></span>`;
   $('#qcard').innerHTML = `
     <div class="qh"><span class="qn">${q.n ? `第 ${q.n} 题` : '准备'}</span>${q.n ? paper : ''}${q.marks ? `<span class="tag">${q.marks} 分</span>` : ''}${move}</div>
-    <h3 class="qt">${esc(q.topic)}</h3>
+    <h3 class="qt">${rich(q.topic)}</h3>
     <div class="qs">${esc(q.src)}</div>
-    <div class="ms"><span class="msl">答案</span><span>${esc(q.ans)}</span></div>
-    ${q.parts ? `<div class="tabs" role="tablist">${q.parts.map((p, j) => `<button type="button" class="tab" role="tab" data-p="${j}">${esc(p.lab)}</button>`).join('')}</div>` : `<p class="nocalc">${esc(q.nocalc)}</p>`}`;
+    <div class="ms"><span class="msl">答案</span><span>${rich(q.ans)}</span></div>
+    ${q.parts ? `<div class="tabs" role="tablist">${q.parts.map((p, j) => `<button type="button" class="tab" role="tab" data-p="${j}">${esc(p.lab)}</button>`).join('')}</div>` : `<p class="nocalc">${rich(q.nocalc)}</p>`}`;
   store.set('q', q.n);
   setHash(`#/${S.model.id}/demo/${q.n}`);
   selectPart(Math.min(part, (q.parts || [1]).length - 1));
@@ -216,13 +229,13 @@ function selectPart(j) {
   let snaps = [], err = '';
   try { snaps = p ? runPart(S.model, q.parts, j) : []; } catch (e) { err = e.message; }
   S.part = j;
-  $('#ptitle').textContent = p ? p.title : q.nocalc ? '这题不用按计算器' : '';
+  $('#ptitle').innerHTML = p ? rich(p.title) : q.nocalc ? '这题不用按计算器' : '';
   load('demo', snaps, new Calc(S.model).view(), $('#chips'), err ? `按法生成出错：${esc(err)}` : '这题不用计算器。');
 }
 function captionDemoStart() {
   const q = S.q;
   if (!P.snaps.length) {
-    caption(null, null, q && q.nocalc ? `<div class="cap-k"><span class="cap-tag">不用计算器</span></div><div class="cap-t">${esc(q.nocalc)}</div>` : '');
+    caption(null, null, q && q.nocalc ? `<div class="cap-k"><span class="cap-tag">不用计算器</span></div><div class="cap-t">${rich(q.nocalc)}</div>` : '');
     return;
   }
   caption(null, null, `<div class="cap-k"><span class="cap-tag">共 ${P.snaps.length} 步</span></div><div class="cap-t">点 ▶ 播放，也可以点下面的按键一步步看。</div>`);
@@ -323,7 +336,7 @@ const PR = { sel: new Set(store.get('topics', PRACTICE.map(t => t.id)).filter(id
 if (!PR.sel.size) PRACTICE.forEach(t => PR.sel.add(t.id));
 function renderTopics() {
   const groups = [...new Set(PRACTICE.map(t => t.topic))];
-  $('#topics').innerHTML = groups.map(g => `<div class="tg"><span class="tg-l">${g}</span>${PRACTICE.filter(t => t.topic === g).map(t => `<button type="button" class="pill" data-t="${t.id}" aria-pressed="${PR.sel.has(t.id)}">${t.name}</button>`).join('')}</div>`).join('');
+  $('#topics').innerHTML = groups.map(g => `<div class="tg"><span class="tg-l">${g}</span>${PRACTICE.filter(t => t.topic === g).map(t => `<button type="button" class="pill" data-t="${t.id}" aria-pressed="${PR.sel.has(t.id)}">${rich(t.name)}</button>`).join('')}</div>`).join('');
 }
 function renderScore() {
   const s = PR.score;
@@ -344,11 +357,11 @@ const fmtAns = a => (a.acc === 'exact' ? String(+a.v.toPrecision(12)) : a.acc ==
 function renderPCard() {
   const t = PR.topic, it = PR.item;
   $('#pcard').innerHTML = `
-    <div class="qh"><span class="tag accent">${t.topic}</span><span class="tag">${t.unit}</span><span class="pc-name">${t.name}</span></div>
-    <div class="formula">${t.formula}</div>
-    <p class="pq">${it.q}</p>
+    <div class="qh"><span class="tag accent">${t.topic}</span><span class="tag">${t.unit}</span><span class="pc-name">${rich(t.name)}</span></div>
+    <div class="formula">${rich(t.formula)}</div>
+    <p class="pq">${rich(it.q)}</p>
     <form class="answers" id="ans-form" autocomplete="off">
-      ${it.answers.map((a, j) => `<label class="ans"><span class="ans-l">${a.lab}</span><input type="text" inputmode="decimal" data-j="${j}" placeholder="${accText(a)}" spellcheck="false"><span class="ans-m" aria-live="polite"></span></label>`).join('')}
+      ${it.answers.map((a, j) => `<label class="ans"><span class="ans-l">${rich(a.lab)}</span><input type="text" inputmode="decimal" data-j="${j}" placeholder="${accText(a)}" spellcheck="false"><span class="ans-m" aria-live="polite"></span></label>`).join('')}
       ${it.any ? '<p class="foot">两个解先写哪个都行。</p>' : ''}
       <div class="pc-actions">
         <button class="btn primary" type="submit">检查</button>
@@ -387,7 +400,7 @@ function checkItem() {
   fb.hidden = false;
   fb.className = `feedback ${all ? 'good' : 'bad'}`;
   fb.innerHTML = all
-    ? `<b>对了。</b><div class="work">${it.work}</div>`
+    ? `<b>对了。</b><div class="work">${rich(it.work)}</div>`
     : `<b>还不对。</b>答案要${it.answers.map(accNeed).filter((v, j, a) => a.indexOf(v) === j).join('、')}。${PR.tries >= 2 ? '可以先看看按法。' : ''}`;
   if (all) $('#p-next').focus();
 }
@@ -398,7 +411,7 @@ function revealItem() {
   const fb = $('#p-fb');
   fb.hidden = false;
   fb.className = 'feedback';
-  fb.innerHTML = `<b>答案</b><div class="work">${it.work}</div>`;
+  fb.innerHTML = `<b>答案</b><div class="work">${rich(it.work)}</div>`;
 }
 function hintItem() {
   let snaps = [];
