@@ -89,6 +89,49 @@ for (const m of Object.values(MODELS)) {
     if (calc.font === 'small' && rows() === 6) pass++; else bad(m.id, 'small font', calc.font, rows());
   }
 }
+// TOOLS（fx-991CW 说明书）：Calculate 的 Undo / 重做，Table 的 Table Type、Edit、改 x 格，Equation 的 Complex Roots
+{
+  const Calc = vm.runInContext('Calc', ctx), cw = MODELS.cw, ex = MODELS.ex;
+  const text = c => c.view().html.replace(/<span class="cur"><\/span>/g, '').replace(/<[^>]+>/g, '').trim();
+  const ok = (cond, ...why) => (cond ? pass++ : bad(...why));
+  // Undo 撤消最后一步，再 Undo 就重做；CW 走 TOOLS → Undo，EX 是 ALPHA + DEL
+  for (const [m, undo] of [[cw, 'tools >Undo'], [ex, 'undo']]) {
+    const c = new Calc(m);
+    runScript(m, `1 2 3 ${undo}`, c);
+    ok(text(c) === '12', m.id, 'undo', text(c));
+    runScript(m, undo, c);
+    ok(text(c) === '123', m.id, 'redo', text(c));
+    runScript(m, `+ 4 = ${undo}`, c);
+    ok(!c.scr.ed.done && text(c) === '123+4', m.id, 'undo after =', text(c));
+  }
+  // TOOLS 菜单的顺序和说明书截图一致
+  {
+    const c = new Calc(cw);
+    runScript(cw, '@table x sq @range:1,3,1 tools', c);
+    const items = c.menuDef(c.scr.name).items.map(i => i.key).join(', ');
+    ok(items === 'Table Range, Define f(x)/g(x), Table Type, Edit, Recalculate', 'cw', 'table TOOLS order', items);
+    runScript(cw, 'ac D D D =', c); // 空着在 x 列按 EXE：上一格加 Step
+    ok(c.tbl.xs.length === 4 && c.tbl.xs[3].v === 4 && c.tbl.f[3].v === 16, 'cw', 'EXE fills x', c.tbl.xs.map(v => v && v.v));
+    runScript(cw, 'U U 1 0 =', c); // 输入数值改 x
+    ok(c.tbl.xs[2].v === 10 && c.tbl.f[2].v === 100, 'cw', 'edit x cell', c.tbl.xs.map(v => v && v.v));
+    runScript(cw, 'U del', c);
+    ok(c.tbl.xs.length === 3, 'cw', 'DEL row', c.tbl.xs.length);
+    runScript(cw, 'tools >Edit >Insert_Row', c);
+    ok(c.tbl.xs.length === 4 && c.tbl.xs[c.scr.r] === null, 'cw', 'Insert Row', c.tbl.xs.map(v => v && v.v));
+    runScript(cw, 'tools >Edit >Delete_All', c);
+    ok(c.tbl.xs.length === 0, 'cw', 'Delete All', c.tbl.xs.length);
+    runScript(cw, 'tools >Table_Type >f(x)', c);
+    ok(c.tableType === 'f' && c.tableLimit() === 45 && !/g\(/.test(c.view().html.replace(/<[^>]+>/g, '')), 'cw', 'Table Type f(x)');
+  }
+  // Complex Roots → Off：x² + 1 = 0 显示 No Real Roots；On 时显示复数解
+  {
+    const c = new Calc(cw);
+    runScript(cw, 'menu >Equation >Polynomial >ax²+bx+c 1 = 0 = 1 = tools >Complex_Roots >Off =', c);
+    ok(c.scr.k === 'msg' && /No Real Roots/.test(c.scr.text), 'cw', 'complex roots off', c.scr.k);
+    runScript(cw, 'ac tools >Complex_Roots >On =', c);
+    ok(c.scr.k === 'eqres' && c.view().res === '0+1i', 'cw', 'complex roots on', c.view().res);
+  }
+}
 // 把结果记法近似成数值（只用于核对练习答案）
 function evalMd(s) {
   const js = norm(s).replace(/−/g, '-').replace(/\\f\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}\{([^{}]*)\}/g, '(($1)/($2))')

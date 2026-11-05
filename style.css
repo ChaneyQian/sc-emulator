@@ -455,6 +455,8 @@ body.immersive:not([data-mode="demo"]) .imm-key:not(:empty) {
 .li.on { background: var(--lcd-ink); color: var(--lcd1); }
 .li.rg span { display: inline-block; min-width: 9cqw; }
 .dm { float: right; }
+.rd { margin-right: .5cqw; }
+.sm { float: right; font-size: .75em; line-height: 1.9; }
 .lst.t2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2cqw; }
 .eqh { font: 600 3.2cqw/1.2 Arial, sans-serif; }
 .coef { border-collapse: collapse; margin-top: 1cqw; font: 600 3.4cqw/1.3 Arial, sans-serif; }
@@ -471,6 +473,8 @@ body.immersive:not([data-mode="demo"]) .imm-key:not(:empty) {
 .tb td.rn { width: 5cqw; text-align: center; }
 .tb td.on { background: var(--lcd-ink); color: var(--lcd1); }
 .tbv { position: absolute; right: 0; bottom: 0; font-size: 4.4cqw; }
+.tbv.in { left: 0; text-align: left; }
+.tbn { font-size: .85em; }
 .vars { display: grid; grid-template-columns: 1fr 1fr; gap: 0 3cqw; font: 600 3.2cqw/1.35 Arial, sans-serif; }
 .vv { margin-left: 1cqw; }
 .msg { font: 600 3.6cqw/1.4 Arial, "Microsoft YaHei", sans-serif; margin-top: 2cqw; white-space: normal; }

@@ -24,6 +24,13 @@ fx-991CW、fx-991EX、fx-991ES PLUS（2nd edition）三款 Casio 科学计算器
 
 CW 的菜单路径（HOME、SETTINGS、CATALOG、VARIABLE、FUNCTION、TOOLS）按 Casio 官方说明书整理；CATALOG 里分类的排列顺序、VARIABLE 子菜单里 Store / Recall 的先后没有在说明书正文里写明，以真机为准。
 
+CW 的 TOOLS 键按说明书截图做：
+
+- Calculate：只有 Undo，撤消上一步按键，再选一次 Undo 就重做（EX 上是 ALPHA + DEL）
+- Table：Table Range、Define f(x)/g(x)、Table Type（f(x)/g(x) 最多 30 行，单列 45 行）、Edit（Insert Row、Delete All）、Recalculate。表格画面可以直接改 x 列：输入数值按 EXE；空着按 EXE 或 + 是上一格加 Step，− 是减 Step，DEL 删掉一行
+- Equation：多项式方程有 Complex Roots（On / Off，Off 时全是复数解就显示 No Real Roots）；Equation 里的 Undo 是按“Undo 多个应用共用”推断的
+- 设置类列表前面是单选圆点（◉ / ○），有下一级菜单的项右边有 ▶
+
 ## 快捷键
 
 | 按键 | 作用 |

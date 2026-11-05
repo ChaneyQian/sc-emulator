@@ -44,7 +44,7 @@ const FN = {
   calc: ['CALC：给式子里的变量代入数值', 'CALC'], solve: ['SOLVE：解方程', 'SOLVE'], eqsign: ['= 等号（写方程用）', '='],
   sto: ['STO：把结果存进变量', 'STO'], rcl: ['RCL：查看变量的值', 'RCL'], recall: ['RECALL：查看全部变量', 'RECALL'],
   mplus: ['M+：结果累加到 M', 'M+'], mminus: ['M−：从 M 中减去结果', 'M−'],
-  ok: ['OK：确认选择', 'OK'], back: ['返回上一级', '↶'], var: ['VARIABLE：变量列表（存入 / 调用）', 'VAR'],
+  ok: ['OK：确认选择', 'OK'], back: ['返回上一级', '↶'], var: ['VARIABLE：变量列表（存入 / 调用）', 'VAR'], undo: ['UNDO：撤消上一步按键，再按一次就重做', 'UNDO'],
   func: ['FUNCTION：定义或调用 f(x)、g(x)', 'f(x)'], catalog: ['CATALOG：函数目录', 'CATALOG'], tools: ['TOOLS：当前应用的工具菜单', 'TOOLS'],
   pgup: ['向上翻页', '⇞'], pgdn: ['向下翻页', '⇟'], fx: ['f( 调用已定义的 f(x)', 'f('], gx: ['g( 调用已定义的 g(x)', 'g('],
   ran: ['Ran# 随机小数', 'Ran#'], ranint: ['RanInt# 随机整数', 'RanInt'], rnd: ['Rnd 按显示位数取整', 'Rnd'],
@@ -53,7 +53,7 @@ for (const d of '0123456789') FN[d] = [`数字 ${d}`, d];
 for (const v of 'ABCDEF') FN['var' + v] = [`变量 ${v}`, v];
 // 没有模拟的功能：按下时屏幕提示“还没做”
 const NA = {
-  optn: 'OPTN 选项菜单', qr: 'QR Code', colon: ': 多语句', eng: 'ENG 工程记数法', hyp: 'hyp 双曲函数', ins: 'INS 插入 / 改写', undo: 'UNDO 撤消',
+  optn: 'OPTN 选项菜单', qr: 'QR Code', colon: ': 多语句', eng: 'ENG 工程记数法', hyp: 'hyp 双曲函数', ins: 'INS 插入 / 改写',
   const: 'CONST 科学常数', conv: 'CONV 单位换算', reset: 'RESET 复位', clr: 'CLR 清除', pol: 'Pol 极坐标', rec: 'Rec 直角坐标', drg: 'DRG▶ 角度换算',
   angle: '∠ 极角', larr: '← 复数运算', i: 'i 虚数单位', mixconv: 'a b/c ⇔ d/c 带分数 / 假分数', pfact: 'FACT 质因数分解',
   matrix: 'MATRIX', vector: 'VECTOR', stat: 'STAT', cmplx: 'CMPLX', base: 'BASE',
@@ -302,8 +302,15 @@ MODELS.cw = {
     cprob: { kind: 'list', title: 'Probability', items: [T('Permutation(P)', 'ins:npr'), T('Combination(C)', 'ins:ncr'), T('Factorial(!)', 'ins:fact'), T('Random Number', 'ins:ran'), T('Random Integer', 'ins:ranint')] },
     cnum: { kind: 'list', title: 'Numeric Calc', items: [T('Absolute Value', 'ins:abs'), T('Round Off', 'ins:rnd')] },
     func: { kind: 'list', title: 'FUNCTION', items: [T('Define f(x)', 'fdef:f', 'Define <i>f</i>(<i>x</i>)'), T('Define g(x)', 'fdef:g', 'Define <i>g</i>(<i>x</i>)'), T('f(x)', 'ins:fx', '<i>f</i>(<i>x</i>)'), T('g(x)', 'ins:gx', '<i>g</i>(<i>x</i>)')] },
-    tools_table: { kind: 'list', title: 'TOOLS', items: [T('Table Type', 'na'), T('Define f(x)/g(x)', 'menu:tdef', 'Define <i>f</i>(<i>x</i>)/<i>g</i>(<i>x</i>)'), T('Table Range', 'range'), T('Recalculate', 'recalc')] },
+    // TOOLS：按说明书截图，Calculate 只有 Undo；Table 依次是 Table Range、Define、Table Type、Edit、Recalculate
+    tools_calc: { kind: 'list', items: [T('Undo', 'undo')] },
+    tools_table: { kind: 'list', items: [T('Table Range', 'range'), T('Define f(x)/g(x)', 'menu:tdef', 'Define <i>f</i>(<i>x</i>)/<i>g</i>(<i>x</i>)'), T('Table Type', 'menu:ttype'), T('Edit', 'menu:tedit'), T('Recalculate', 'recalc')] },
     tdef: { kind: 'list', title: 'Define f(x)/g(x)', items: [T('Define f(x)', 'fdef:f', 'Define <i>f</i>(<i>x</i>)'), T('Define g(x)', 'fdef:g', 'Define <i>g</i>(<i>x</i>)')] },
+    ttype: { kind: 'list', mark: 'ttype', items: [T('f(x)/g(x)', 'ttype:fg', '<i>f</i>(<i>x</i>)/<i>g</i>(<i>x</i>)'), T('f(x)', 'ttype:f', '<i>f</i>(<i>x</i>)'), T('g(x)', 'ttype:g', '<i>g</i>(<i>x</i>)')] },
+    tedit: { kind: 'list', items: [T('Insert Row', 'trow:ins'), T('Delete All', 'trow:clear')] },
+    tools_poly: { kind: 'list', items: [T('Complex Roots', 'menu:croots'), T('Undo', 'undo')] },
+    tools_simul: { kind: 'list', items: [T('Undo', 'undo')] },
+    croots: { kind: 'list', title: 'Complex Roots', mark: 'croots', items: [T('On', 'croots:on'), T('Off', 'croots:off')] },
   },
   macros: {
     deg: () => ['setup', { pick: 'Calc Settings' }, { pick: 'Angle Unit' }, { pick: 'Degree' }, 'ac'],
@@ -336,9 +343,11 @@ const GLOSS = {
   MthIO: '自然显示输入输出', 'MathI/DecimalO': '自然显示输入、小数输出', 'Calc Settings': '计算设置', 'Func Analysis': '函数分析',
   'Derivative(d/dx)': '某一点的导数', 'Integration(∫)': '定积分', 'Summation(Σ)': '求和', Probability: '概率', 'Permutation(P)': '排列数',
   'Combination(C)': '组合数', 'Factorial(!)': '阶乘', 'Numeric Calc': '数值计算', 'Absolute Value': '绝对值', 'Define f(x)': '定义 f(x)',
-  'Define g(x)': '定义 g(x)', 'f(x)': '输入 f(', 'Define f(x)/g(x)': '定义函数', 'Table Range': '表格范围', Store: '存入变量', Recall: '调用变量',
+  'Define g(x)': '定义 g(x)', 'Define f(x)/g(x)': '定义函数', 'Table Range': '表格范围', Store: '存入变量', Recall: '调用变量',
   'LineI/LineO': '线性输入输出', 'LineI/DecimalO': '线性输入、小数输出', LineIO: '线性显示', 'System Settings': '系统设置',
   'MultiLine Font': '线性显示的字号', 'Normal Font': '正常字号，最多 4 行', 'Small Font': '小字号，最多 6 行',
+  Undo: '撤消上一步按键', 'Table Type': '表格列', Edit: '编辑表格', 'Insert Row': '在光标上方插入一行', 'Delete All': '清空表格',
+  Recalculate: '按现在的设置重算', 'Complex Roots': '复数解', 'f(x)/g(x)': 'f 和 g 两列，最多 30 行',
   Standard: '标准（分数 / 根式）', Decimal: '小数', '2 Unknowns': '二元', '3 Unknowns': '三元', 'ax²+bx+c': '二次方程', 'ax³+bx²+cx+d': '三次方程',
   'aX²+bX+c=0': '二次方程', 'aX³+bX²+cX+d=0': '三次方程', 'anX+bnY=cn': '二元一次方程组', 'anX+bnY+cnZ=dn': '三元一次方程组',
 };

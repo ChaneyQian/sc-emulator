@@ -187,6 +187,9 @@ class Calc {
     this.frows = { f: null, g: null };
     this.range = [Engine.int(1), Engine.int(5), Engine.int(1)];
     this.tbl = null;
+    this.tableType = 'fg'; // CW 的 TOOLS → Table Type：fg / f / g
+    this.complexRoots = true; // CW 的 Equation TOOLS → Complex Roots
+    this.undoSnap = null; // 上一步按键之前的状态（Undo 用；Undo 之后存的是 Undo 之前的状态，再按就是重做）
     this.mod = null;
     this.pending = null;
     this.off = false;
@@ -240,8 +243,43 @@ class Calc {
     }
     const fn = mod ? key[mod] && key[mod][0] : key.fn;
     if (!fn) return { id, mod, fn: null, name: `${mod === 'sh' ? 'SHIFT' : 'ALPHA'} 加这个键没有功能`, chip: '' };
+    const pre = fn === 'undo' ? null : this.snapshot();
     this.dispatch(fn, key);
+    if (pre && this.scr === pre.sc && this.sig(this.snapshot()) !== this.sig(pre)) this.undoSnap = pre;
     return this.result(id, mod, fn);
+  }
+
+  /* ---- Undo：只记最后一步按键；撤消后再撤消一次就是重做（说明书 Undo Operations） ---- */
+  snapshot() {
+    const sc = this.scr;
+    const ed = e => e && { root: clone(e.root), path: e.stack.map(f => [f.pos, f.slot]), idx: e.idx, done: e.done, prefix: e.prefix };
+    if (sc.k === 'edit') return { sc, ed: ed(sc.ed), res: sc.res, dec: sc.dec, ans: this.ans, hist: this.hist.slice() };
+    if (sc.k === 'coef') return { sc, ed: ed(sc.ed), vals: sc.vals.map(r => r.slice()), r: sc.r, c: sc.c };
+    return null;
+  }
+  sig(s) { return s && JSON.stringify([s.ed, s.res && s.res.v, s.dec, s.vals && s.vals.map(r => r.map(v => v.v)), s.r, s.c]); }
+  restore(s) {
+    const sc = s.sc;
+    const ed = st => {
+      if (!st) return null;
+      const e = new Editor(st.prefix);
+      e.root = clone(st.root);
+      let row = e.root;
+      for (const [pos, slot] of st.path) { const node = row[pos]; e.stack.push({ row, pos, node, slot }); row = node.s[slot]; }
+      Object.assign(e, { row, idx: st.idx, done: st.done });
+      return e;
+    };
+    sc.ed = ed(s.ed);
+    if (sc.k === 'edit') Object.assign(sc, { res: s.res, dec: s.dec }), Object.assign(this, { ans: s.ans, hist: s.hist.slice() });
+    else Object.assign(sc, { vals: s.vals.map(r => r.slice()), r: s.r, c: s.c });
+  }
+  doUndo() {
+    const s = this.undoSnap;
+    if (!s || this.scr !== s.sc) { this.desc = 'Undo：没有可以撤消的操作'; return; }
+    const now = this.snapshot();
+    this.restore(s);
+    this.undoSnap = now;
+    this.desc = 'Undo：撤消上一步按键（再选一次 Undo 就重做）';
   }
   result(id, mod, fn) {
     const info = FN[fn] || [fn, fn];
@@ -250,6 +288,7 @@ class Calc {
   dispatch(fn, key) {
     if (fn === 'on') { this.app === 'table' ? this.startTable() : this.toCalc(); return; }
     if (fn === 'off') { this.off = true; this.desc = 'SHIFT + AC = 关机，按 ON 重新开机'; return; }
+    if (fn === 'undo') { this.doUndo(); return; } // fx-991EX：ALPHA + DEL
     if (NA[fn] && this.scr.k !== 'menu') { this.msg(`还没做：${NA[fn]}`); return; }
     this['k_' + this.scr.k](fn, key);
   }
@@ -354,7 +393,7 @@ class Calc {
       case 'var': this.openMenu('var'); return;
       case 'func': this.openMenu('func'); return;
       case 'catalog': this.openMenu('catalog'); return;
-      case 'tools': this.msg('还没做：Calculate 里的 TOOLS 菜单'); return;
+      case 'tools': this.openMenu('tools_calc'); return;
       case 'format': if (ed.done && sc.res) this.openMenu('format'); return;
     }
   }
@@ -390,7 +429,7 @@ class Calc {
     if (def.mark) sel = Math.max(0, def.items.findIndex(it => it.act === this.markOf(def)));
     this.scr = { k: 'menu', name, sel, back: this.scr };
   }
-  markOf(def) { return `${def.mark}:${{ io: this.io, angle: this.angle, font: this.font }[def.mark]}`; }
+  markOf(def) { return `${def.mark}:${{ io: this.io, angle: this.angle, font: this.font, ttype: this.tableType, croots: this.complexRoots ? 'on' : 'off' }[def.mark]}`; }
   // fx-991EX 的 SETUP 每屏 4 项、每屏重新从 1 编号，▲▼ 翻屏
   pageOf(def, j) { return def.perPage ? Math.floor(j / def.perPage) : 0; }
   exitMenus() { while (this.scr.k === 'menu' || this.scr.k === 'msg') this.scr = this.scr.back; return this.scr; }
@@ -459,7 +498,26 @@ class Calc {
         return;
       }
       case 'range': this.exitMenus(); this.startRange(); return;
-      case 'recalc': this.exitMenus(); this.genTable(); return;
+      case 'recalc': this.exitMenus(); this.recalcTable(); this.desc = 'Recalculate：按现在的 f(x)、g(x) 和设置重算表格'; return;
+      case 'undo': this.exitMenus(); this.doUndo(); return;
+      case 'ttype': // 换表格列会丢掉表里的数据（说明书：Table Type 改变时清除表格）
+        this.tableType = arg;
+        this.exitMenus();
+        this.tbl = { xs: [], f: [], g: [] };
+        this.scr = { k: 'table', r: 0, c: 1, ed: null };
+        this.desc = `Table Type：${{ fg: 'f(x) 和 g(x) 两列', f: '只有 f(x)', g: '只有 g(x)' }[arg]}`;
+        return;
+      case 'trow': {
+        this.exitMenus();
+        const t = this.tableData(), sc = this.scr;
+        if (arg === 'clear') { t.xs = []; t.f = []; t.g = []; sc.r = 0; this.desc = 'Delete All：清空表格'; return; }
+        if (t.xs.length >= this.tableLimit()) { this.desc = '表格已经满了'; return; }
+        const r = Math.min(sc.r, t.xs.length);
+        t.xs.splice(r, 0, null); t.f.splice(r, 0, null); t.g.splice(r, 0, null);
+        this.desc = 'Insert Row：在光标上方插入一行';
+        return;
+      }
+      case 'croots': this.complexRoots = arg === 'on'; this.exitMenus(); return;
     }
   }
 
@@ -496,6 +554,7 @@ class Calc {
       case 'menu': this.openMenu('main'); return;
       case 'setup': this.openMenu('setup'); return;
       case 'back': this.openMenu(sc.type === 'poly' ? 'poly' : 'simul'); return;
+      case 'tools': this.openMenu(sc.type === 'poly' ? 'tools_poly' : 'tools_simul'); return;
     }
   }
   solveCoef() {
@@ -504,8 +563,11 @@ class Calc {
       if (sc.type === 'poly') {
         const v = sc.vals[0];
         const res = sc.n === 2 ? Engine.quadratic(v[0], v[1], v[2]) : Engine.cubic(v[0], v[1], v[2], v[3]);
-        const one = res.roots.length === 1;
-        res.roots.forEach((r, k) => items.push({ lab: `<i>${X}</i>${one ? '' : `<sub>${k + 1}</sub>`}=`, re: r.re, im: r.im }));
+        // CW 的 TOOLS → Complex Roots → Off：只显示实数解，全是复数解就显示 No Real Roots
+        const roots = this.m.id === 'cw' && !this.complexRoots ? res.roots.filter(r => !r.im) : res.roots;
+        if (!roots.length) { this.msg('No Real Roots（没有实数解）'); return; }
+        const one = roots.length === 1;
+        roots.forEach((r, k) => items.push({ lab: `<i>${X}</i>${one ? '' : `<sub>${k + 1}</sub>`}=`, re: r.re, im: r.im }));
         if (res.ext && this.m.id !== 'es') {
           const w = res.ext.min ? 'Minimum' : 'Maximum';
           items.push({ lab: `<i>x</i>-Value ${w}=`, re: res.ext.x }, { lab: `<i>y</i>-Value ${w}=`, re: res.ext.y });
@@ -516,7 +578,7 @@ class Calc {
         sol.forEach((v, k) => items.push({ lab: `<i>${this.m.id === 'es' ? 'XYZ'[k] : 'xyz'[k]}</i>=`, re: v }));
       }
     } catch (e) { this.fail(e, sc); return; }
-    this.scr = { k: 'eqres', items, i: 0, back: sc, dec: this.io === 'dec' };
+    this.scr = { k: 'eqres', items, i: 0, back: sc, dec: this.decOut };
     this.desc = `${this.exe}：求解，显示第一个结果`;
   }
   k_eqres(fn) {
@@ -532,6 +594,7 @@ class Calc {
       case 'format': this.openMenu('format'); return;
       case 'menu': this.openMenu('main'); return;
       case 'setup': this.openMenu('setup'); return;
+      case 'tools': this.openMenu(sc.back.type === 'poly' ? 'tools_poly' : 'tools_simul'); return;
     }
   }
 
@@ -590,7 +653,8 @@ class Calc {
   /* ---- 表格 ---- */
   startTable() {
     this.app = 'table';
-    if (this.m.id === 'cw') { this.genTable(); return; }
+    // CW 打开就是表格画面（上次的表还在）；新建表格走 TOOLS → Table Range → Execute
+    if (this.m.id === 'cw') { this.tableData(); this.scr = { k: 'table', r: 0, c: 1, ed: null }; return; }
     this.startFdef('f', null, 'table');
   }
   startFdef(name, back, flow) {
@@ -615,7 +679,7 @@ class Calc {
           return;
         }
         this.scr = sc.back || this.editScr();
-        if (this.scr.k === 'table') this.genTable();
+        if (this.scr.k === 'table') this.recalcTable();
         this.desc = `${this.exe}：登记 ${sc.name}(x)`;
         return;
       }
@@ -648,29 +712,84 @@ class Calc {
       case 'menu': this.openMenu('main'); return;
     }
   }
+  /* 表格列：CW 由 TOOLS → Table Type 决定（两列最多 30 行，一列 45 行）；EX 有 g(x) 时两列；ES 只有 f(x) */
+  tableCols() {
+    if (this.m.id === 'cw') return { f: this.tableType !== 'g', g: this.tableType !== 'f' };
+    return { f: true, g: this.m.id === 'ex' && !!this.frows.g };
+  }
+  tableLimit() { const c = this.tableCols(); return c.f && c.g ? 30 : this.m.id === 'es' ? 30 : 45; }
+  tableFns() {
+    const env = this.env(), cols = this.tableCols();
+    const run = row => {
+      if (!row) return null;
+      let c;
+      try { c = Engine.compile(row, this.opt); } catch (e) { return null; }
+      return x => { try { return c({ ...env, vars: { ...env.vars, x } }); } catch (e) { return null; } };
+    };
+    return { F: cols.f ? run(this.frows.f) : null, G: cols.g ? run(this.frows.g) : null };
+  }
+  tableData() { if (!this.tbl) this.tbl = { xs: [], f: [], g: [] }; return this.tbl; }
+  calcRow(k, fns = this.tableFns()) {
+    const t = this.tbl, x = t.xs[k];
+    t.f[k] = x && fns.F ? fns.F(x) : null;
+    t.g[k] = x && fns.G ? fns.G(x) : null;
+  }
+  recalcTable() { const t = this.tableData(), fns = this.tableFns(); t.xs.forEach((_, k) => this.calcRow(k, fns)); }
   genTable() {
-    const [a, b, s] = this.range.map(v => v.v);
-    const f = this.frows.f, g = this.m.id === 'es' ? null : this.frows.g;
-    this.scr = { k: 'table', r: 0, c: 1 };
-    if (!f && !g) { this.tbl = null; return; }
+    const [a, b, s] = this.range.map(v => v.v), fns = this.tableFns();
+    this.scr = { k: 'table', r: 0, c: 1, ed: null };
+    if (!fns.F && !fns.G && this.m.id !== 'cw') { this.tbl = null; return; }
     const n = s > 0 && b >= a ? Math.floor((b - a) / s + 1e-9) + 1 : 0;
-    const limit = g && f ? 30 : this.m.id === 'es' ? 30 : 45;
-    if (!n || n > limit) { this.tbl = null; this.scr = { k: 'err', kind: 'Range ERROR', back: this.scr }; return; }
-    const env = this.env();
-    const run = row => { if (!row) return null; let c; try { c = Engine.compile(row, this.opt); } catch (e) { return null; } return x => { try { return c({ ...env, vars: { ...env.vars, x } }); } catch (e) { return null; } }; };
-    const F = run(f), G = run(g), xs = [];
+    if (!n || n > this.tableLimit()) { this.scr = { k: 'err', kind: 'Range ERROR', back: this.scr }; return; }
+    const xs = [];
     for (let k = 0; k < n; k++) xs.push(Engine.add(this.range[0], Engine.mul(Engine.int(k), this.range[2])));
-    this.tbl = { xs, f: F && xs.map(F), g: G && xs.map(G) };
+    this.tbl = { xs, f: [], g: [] };
+    this.recalcTable();
   }
   k_table(fn) {
-    const sc = this.scr, t = this.tbl, cols = t ? 1 + !!t.f + !!t.g : 1;
+    const sc = this.scr, t = this.tbl, cw = this.m.id === 'cw', cols = this.tableCols(), ncol = 1 + cols.f + cols.g;
+    // CW 可以直接改 x 列（说明书“Editing Number Table Screen Data”）：输入数值按 EXE；
+    // 空着按 EXE 或 + 是上一格加 Step，− 是减 Step；DEL 删掉这一行
+    if (cw && sc.c === 1 && ((sc.ed && (this.inmap[fn] || ['L', 'R', 'del'].includes(fn))) || (!sc.ed && this.inmap[fn] && !['add', 'sub'].includes(fn)))) {
+      if (!sc.ed) sc.ed = new Editor();
+      editKey(sc.ed, fn, this.inmap);
+      return;
+    }
     switch (fn) {
-      case 'U': if (sc.r > 0) sc.r--; return;
-      case 'D': if (t && sc.r < t.xs.length - 1) sc.r++; return;
-      case 'L': if (sc.c > 0) sc.c--; return;
-      case 'R': if (sc.c < cols - 1) sc.c++; return;
-      case 'ac': if (this.m.id !== 'cw') this.startFdef('f', null, 'table'); return;
-      case 'tools': this.openMenu('tools_table'); return;
+      case 'eq': case 'ok': case 'add': case 'sub': {
+        if (!cw || sc.c !== 1 || sc.r >= this.tableLimit()) return;
+        const d = this.tableData(), r = sc.r;
+        let x;
+        if (sc.ed && sc.ed.root.length) {
+          try { x = Engine.compile(sc.ed.root, this.opt)(this.env()); } catch (e) { sc.ed = null; this.fail(e, sc); return; }
+        } else {
+          if (r === 0 || !d.xs[r - 1]) { sc.ed = null; return; }
+          x = fn === 'sub' ? Engine.sub(d.xs[r - 1], this.range[2]) : Engine.add(d.xs[r - 1], this.range[2]);
+        }
+        sc.ed = null;
+        if (r >= d.xs.length) d.xs.push(x); else d.xs[r] = x;
+        this.calcRow(r);
+        this.desc = `${fn === 'sub' ? '−：上一格减 Step' : fn === 'add' ? '+：上一格加 Step' : this.exe}，x = ${Engine.display(x, true)}`;
+        if (sc.r < Math.min(d.xs.length, this.tableLimit() - 1)) sc.r++;
+        return;
+      }
+      case 'del':
+        if (!cw || !t || sc.r >= t.xs.length) return;
+        [t.xs, t.f, t.g].forEach(a => a.splice(sc.r, 1));
+        if (sc.r > t.xs.length) sc.r = t.xs.length;
+        this.desc = 'DEL：删掉这一行';
+        return;
+      case 'U': sc.ed = null; if (sc.r > 0) sc.r--; return;
+      case 'D': {
+        sc.ed = null;
+        const last = !t ? 0 : cw ? Math.min(t.xs.length, this.tableLimit() - 1) : t.xs.length - 1;
+        if (sc.r < last) sc.r++;
+        return;
+      }
+      case 'L': if (sc.c > 1) sc.c--; return;
+      case 'R': if (sc.c < ncol) sc.c++; return;
+      case 'ac': if (sc.ed) { sc.ed = null; return; } if (!cw) this.startFdef('f', null, 'table'); return;
+      case 'tools': sc.ed = null; this.openMenu('tools_table'); return;
       case 'func': this.openMenu('func'); return;
       case 'menu': this.openMenu('main'); return;
       case 'setup': this.openMenu('setup'); return;
@@ -741,7 +860,11 @@ class Calc {
     const vis = items.slice(first, first + rows);
     const bar = def.perPage ? `<div class="pg mp">${first > 0 ? '▲' : ''}${first + rows < items.length ? '▼' : ''}</div>`
       : items.length > rows ? `<div class="sb"><span style="top:${(first / items.length) * 100}%;height:${(rows / items.length) * 100}%"></span></div>` : '';
-    return `<div class="lst">${def.title ? `<div class="lt">${def.title}</div>` : ''}${vis.map((it, j) => `<div class="li${cursor && first + j === sc.sel ? ' on' : ''}">${it.n ? it.n + ':' : ''}${it.lab}${mark && it.act === mark ? '<span class="dm">◆</span>' : ''}</div>`).join('')}</div>${bar}`;
+    // CW：设置项前面是单选圆点（◉ 当前、○ 其他），有下一级菜单的项右边有 ▶（照说明书截图）
+    const cwStyle = this.m.id === 'cw';
+    const radio = it => (cwStyle && mark ? `<span class="rd">${it.act === mark ? '◉' : '○'}</span>` : '');
+    const tail = it => (cwStyle && it.act.startsWith('menu:') ? '<span class="sm">▶</span>' : !cwStyle && mark && it.act === mark ? '<span class="dm">◆</span>' : '');
+    return `<div class="lst">${def.title ? `<div class="lt">${def.title}</div>` : ''}${vis.map((it, j) => `<div class="li${cursor && first + j === sc.sel ? ' on' : ''}">${radio(it)}${it.n ? it.n + ':' : ''}${it.lab}${tail(it)}</div>`).join('')}</div>${bar}`;
   }
   v_coef() {
     const sc = this.scr, X = this.m.xName || 'x';
@@ -781,18 +904,25 @@ class Calc {
     return `<div class="lst"><div class="lt">Table Range</div>${rows.join('')}</div>`;
   }
   v_table() {
-    const sc = this.scr, t = this.tbl, X = this.m.xName || 'x';
-    if (!t) return `<div class="msg">${this.m.id === 'cw' ? '还没有定义 f(x)：按 TOOLS → Define f(x)/g(x)' : ''}</div>`;
-    const cols = [['', null], [`<i>${X}</i>`, t.xs], ...(t.f ? [[`<i>f</i>(<i>${X}</i>)`, t.f]] : []), ...(t.g ? [[`<i>g</i>(<i>${X}</i>)`, t.g]] : [])];
-    const vis = 4, first = Math.max(0, Math.min(sc.r - 1, t.xs.length - vis));
-    const cell = v => (v ? md(Engine.fmtDec(v.v, 6)) : 'ERROR');
+    const sc = this.scr, cw = this.m.id === 'cw', t = this.tbl || (cw ? this.tableData() : null), X = this.m.xName || 'x', show = this.tableCols();
+    if (!t) return '';
+    const fx = n => `<i>${n}</i>(<i>${X}</i>)`;
+    // [表头, 这一列的数据, 这一列的函数有没有定义]
+    const cols = [['', null], [`<i>${X}</i>`, t.xs, true], ...(show.f ? [[fx('f'), t.f, !!this.frows.f]] : []), ...(show.g ? [[fx('g'), t.g, !!this.frows.g]] : [])];
+    const vis = 4, nrows = cw ? Math.max(vis, Math.min(t.xs.length + 1, this.tableLimit())) : t.xs.length;
+    const first = Math.max(0, Math.min(sc.r - 1, nrows - vis));
+    const cell = (c, r) => { const v = c[1][r]; return v ? md(Engine.fmtDec(v.v, 6)) : c[2] && t.xs[r] ? 'ERROR' : ''; };
     let h = `<table class="tb"><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr>`;
-    for (let r = first; r < Math.min(first + vis, t.xs.length); r++) {
-      h += `<tr><td class="rn">${r + 1}</td>${cols.slice(1).map((c, j) => `<td class="${r === sc.r && j === sc.c - 1 ? 'on' : ''}">${cell(c[1][r])}</td>`).join('')}</tr>`;
+    for (let r = first; r < Math.min(first + vis, nrows); r++) {
+      h += `<tr><td class="rn">${r + 1}</td>${cols.slice(1).map((c, j) => `<td class="${r === sc.r && j === sc.c - 1 ? 'on' : ''}">${cell(c, r)}</td>`).join('')}</tr>`;
     }
-    const selCol = cols[sc.c + 1] || cols[1], sv = selCol[1][sc.r];
+    const sv = (cols[sc.c] || cols[1])[1][sc.r];
     this.lastMd = sv ? Engine.display(sv, true) : null;
-    return `${h}</table><div class="tbv">${sv ? md(Engine.fmtDec(sv.v)) : ''}</div>`;
+    // 底行：正在输入的数，或光标所在格的完整数值；CW 还没定义函数时显示 f(x)/g(x):None
+    let bottom = sv ? md(Engine.fmtDec(sv.v)) : '';
+    if (sc.ed) bottom = rr(sc.ed.root, sc.ed.cursor(), true);
+    else if (cw && !this.frows.f && !this.frows.g) bottom = `<span class="tbn">${[show.f && fx('f'), show.g && fx('g')].filter(Boolean).join('/')}:None</span>`;
+    return `${h}</table><div class="tbv${sc.ed ? ' in' : ''}">${bottom}</div>`;
   }
   v_vars() {
     const names = ['A', 'B', 'C', 'D', 'E', 'F', 'M', 'x', 'y', 'z'];
@@ -861,6 +991,7 @@ function runScript(model, seq, calc = new Calc(model)) {
   for (const t of toks) {
     if (t[0] === '"') { const s = last(); if (s) s.note = t.slice(1, -1); continue; }
     if (t[0] === '[') { const s = last(); if (s) (s.expect = s.expect || []).push(t.slice(1, -1)); continue; }
+    if (t[0] === '>' && t.length > 1) { pick(t.slice(1).replace(/_/g, ' ')); continue; } // >Table_Type：在当前菜单里选这一项
     if (t[0] === '@') {
       const m = t.match(/^@(\w+)(?::(.*))?$/);
       const mac = m && model.macros[m[1]];

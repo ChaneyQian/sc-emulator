@@ -14,6 +14,7 @@
  *   @sim2:a1,b1,c1,a2,b2,c2       方程模式解二元一次方程组
  *   @fx … @calc:v [结果]          代入 x = v 求值（EX / ES 用 CALC；CW 用 FUNCTION 定义 f(x) 再算 f(v)）
  *   @table … @range:起,止,步      Table 模式：先输入 f(x)，再设表格范围
+ *   tools >Table_Type             按菜单项名称选择（空格写成 _），各机型自动换成数字键或方向键 + OK
  */
 const GROUPS = [
   ["interest", "复利"], ["variation", "正比 / 反比"], ["circle", "圆定理"], ["trig", "三角 + 二次方程"],
